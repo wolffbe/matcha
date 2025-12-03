@@ -1,0 +1,14 @@
+cython<3
+scikit-build-core
+cmake
+ninja
+pdqhash
+faiss-cpu
+numpy
+fastapi
+uvicorn[standard]
+python-multipart
+openai
+pillow
+pydantic-settings
+datasketch

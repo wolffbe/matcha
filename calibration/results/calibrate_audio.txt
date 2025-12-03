@@ -1,0 +1,98 @@
+================================================================================
+Audio Hamming Distance Calibration Results
+Generated: 2025-12-03 10:31:16
+Duration: 22m 49.3s
+================================================================================
+
+Calibration criteria (threshold = 85%):
+  - 10,12,14% modification: should MATCH (≤15%)
+  - 16,18,20% modification: should NOT MATCH (>15%)
+
+Test categories:
+  - Trim start/end/middle: pct% removed
+  - Noise: pct% noise mixed in
+  - Quality: bitrate = 128k * (1 - pct/100)^6
+  - Mono: always should match
+  - Volume: ±pct% volume change
+  - Speed: ±pct% speed change
+
+Note: Audio now uses Hamming distance (0-256 bits) instead of L2.
+Chromaprint fingerprints are converted to 256-bit binary vectors.
+
+
+================================================================================
+ALL AUDIO HAMMING THRESHOLDS
+================================================================================
+
+Hamming      | Correct    | Rate       | AvgA     | AvgT     | AvgBoth 
+----------------------------------------------------------------------
+28           | 32/57      | 56%      | 97.0%    | 87.9%    | 92.3%   
+
+================================================================================
+BEST: audio_hamming_distance=28
+================================================================================
+
+Calibration                              | Pass   | Audio    | Trans    | Hamming    | Status      
+----------------------------------------------------------------------------------------------------
+Exact match (should match)               | ✓      | 100%     | 100%     | 0          | exact_match 
+Different audio (should NOT match)       | ✓      | -        | -        | -          | no_match    
+Trim start 10% (should match)            | ✓      | 89%      | 84%      | 3          | near_match  
+Trim start 12% (should match)            | ✓      | 64%      | 100%     | 10         | near_match  
+Trim start 14% (should match)            | ✗      | -        | -        | -          | no_match    
+Trim start 16% (should NOT match)        | ✓      | -        | -        | -          | no_match    
+Trim start 18% (should NOT match)        | ✗      | 100%     | 83%      | 0          | near_match  
+Trim start 20% (should NOT match)        | ✓      | -        | -        | -          | no_match    
+Trim end 10% (should match)              | ✓      | 100%     | 84%      | 0          | near_match  
+Trim end 12% (should match)              | ✓      | 100%     | 91%      | 0          | near_match  
+Trim end 14% (should match)              | ✓      | 100%     | 91%      | 0          | near_match  
+Trim end 16% (should NOT match)          | ✗      | 100%     | 87%      | 0          | near_match  
+Trim end 18% (should NOT match)          | ✗      | 100%     | 85%      | 0          | near_match  
+Trim end 20% (should NOT match)          | ✗      | 100%     | 94%      | 0          | near_match  
+Trim middle 10% (should match)           | ✓      | 100%     | 91%      | 0          | near_match  
+Trim middle 12% (should match)           | ✓      | 100%     | 81%      | 0          | near_match  
+Trim middle 14% (should match)           | ✓      | 100%     | 90%      | 0          | near_match  
+Trim middle 16% (should NOT match)       | ✗      | 100%     | 65%      | 0          | near_match  
+Trim middle 18% (should NOT match)       | ✗      | 100%     | 90%      | 0          | near_match  
+Trim middle 20% (should NOT match)       | ✗      | 100%     | 84%      | 0          | near_match  
+Noise 10% (should match)                 | ✓      | 100%     | 100%     | 0          | exact_match 
+Noise 12% (should match)                 | ✓      | 100%     | 100%     | 0          | exact_match 
+Noise 14% (should match)                 | ✓      | 100%     | -        | 0          | exact_match 
+Noise 16% (should NOT match)             | ✗      | 100%     | -        | 0          | exact_match 
+Noise 18% (should NOT match)             | ✗      | 100%     | -        | 0          | exact_match 
+Noise 20% (should NOT match)             | ✗      | 100%     | -        | 0          | exact_match 
+Quality reduced 10% (should match)       | ✓      | 100%     | 100%     | 0          | exact_match 
+Quality reduced 12% (should match)       | ✓      | 100%     | 84%      | 0          | near_match  
+Quality reduced 14% (should match)       | ✓      | 100%     | 100%     | 0          | exact_match 
+Quality reduced 16% (should NOT match)   | ✗      | 100%     | 90%      | 0          | near_match  
+Quality reduced 18% (should NOT match)   | ✗      | 100%     | 90%      | 0          | near_match  
+Quality reduced 20% (should NOT match)   | ✗      | 100%     | 90%      | 0          | near_match  
+Mono (should match)                      | ✓      | 100%     | 91%      | 0          | near_match  
+Volume -10% (should match)               | ✓      | 100%     | 84%      | 0          | near_match  
+Volume -12% (should match)               | ✓      | 100%     | 85%      | 0          | near_match  
+Volume -14% (should match)               | ✓      | 100%     | 84%      | 0          | near_match  
+Volume -16% (should NOT match)           | ✗      | 100%     | 84%      | 0          | near_match  
+Volume -18% (should NOT match)           | ✗      | 100%     | 84%      | 0          | near_match  
+Volume -20% (should NOT match)           | ✗      | 100%     | 84%      | 0          | near_match  
+Volume +10% (should match)               | ✓      | 100%     | 84%      | 0          | near_match  
+Volume +12% (should match)               | ✓      | 100%     | 84%      | 0          | near_match  
+Volume +14% (should match)               | ✓      | 100%     | 100%     | 0          | exact_match 
+Volume +16% (should NOT match)           | ✗      | 100%     | 84%      | 0          | near_match  
+Volume +18% (should NOT match)           | ✗      | 100%     | 84%      | 0          | near_match  
+Volume +20% (should NOT match)           | ✗      | 100%     | 80%      | 0          | near_match  
+Speed -10% (should match)                | ✓      | 93%      | 84%      | 2          | near_match  
+Speed -12% (should match)                | ✓      | 93%      | 79%      | 2          | near_match  
+Speed -14% (should match)                | ✓      | 89%      | 79%      | 3          | near_match  
+Speed -16% (should NOT match)            | ✗      | 86%      | 93%      | 4          | near_match  
+Speed -18% (should NOT match)            | ✗      | 75%      | 100%     | 7          | near_match  
+Speed -20% (should NOT match)            | ✗      | 89%      | 78%      | 3          | near_match  
+Speed +10% (should match)                | ✓      | 93%      | 100%     | 2          | near_match  
+Speed +12% (should match)                | ✓      | 96%      | 61%      | 1          | near_match  
+Speed +14% (should match)                | ✗      | -        | -        | -          | no_match    
+Speed +16% (should NOT match)            | ✓      | -        | -        | -          | no_match    
+Speed +18% (should NOT match)            | ✗      | 82%      | 100%     | 5          | near_match  
+Speed +20% (should NOT match)            | ✓      | -        | -        | -          | no_match    
+----------------------------------------------------------------------------------------------------
+AVERAGES                                 |        | 97.0%    | 87.9%    |            | Both:92.3%  
+OVERALL                                  | 32/57  | 56%
+
+AUDIO_HAMMING_DISTANCE=28
