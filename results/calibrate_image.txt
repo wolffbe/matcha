@@ -1,0 +1,125 @@
+================================================================================
+Image Hamming Distance Calibration Results
+Generated: 2025-12-06 20:34:47
+Duration: 2m 41.1s
+Service URL: http://localhost:8000
+================================================================================
+
+Calibration criteria (threshold = 90%):
+  - 6,8,10% modification: should MATCH (≤10%)
+  - 12,14% modification: should NOT MATCH (>10%)
+
+Test mappings:
+  - Cutoff (right/left/top/bottom): pct% cut off from each side
+  - Noise: level = pct * 2.5 (10% = 25, 20% = 50)
+  - Brightness: level = pct * 2.5
+  - Contrast: factor = 1 + pct * 0.05 (10% = 1.5, 20% = 2.0)
+  - Resize: scale = 100 - pct (10% = 90% scale)
+  - JPEG: quality = 100 - pct (10% = quality 90)
+  - Blur: radius = pct / 5 (10% = 2, 20% = 4)
+  - Grayscale: binary (always should match)
+
+
+================================================================================
+ALL IMAGE HAMMING DISTANCES
+================================================================================
+
+Hamming      | Correct    | Rate      
+----------------------------------------
+27           | 28/53      | 53%
+20           | 27/53      | 51%
+21           | 27/53      | 51%
+23           | 27/53      | 51%
+25           | 27/53      | 51%
+11           | 26/53      | 49%
+13           | 26/53      | 49%
+15           | 26/53      | 49%
+16           | 26/53      | 49%
+17           | 26/53      | 49%
+18           | 26/53      | 49%
+22           | 26/53      | 49%
+24           | 26/53      | 49%
+26           | 26/53      | 49%
+0            | 25/53      | 47%
+1            | 25/53      | 47%
+2            | 25/53      | 47%
+3            | 25/53      | 47%
+4            | 25/53      | 47%
+5            | 25/53      | 47%
+6            | 25/53      | 47%
+7            | 25/53      | 47%
+8            | 25/53      | 47%
+9            | 25/53      | 47%
+10           | 25/53      | 47%
+12           | 25/53      | 47%
+14           | 25/53      | 47%
+19           | 25/53      | 47%
+28           | 25/53      | 47%
+29           | 25/53      | 47%
+30           | 25/53      | 47%
+
+================================================================================
+BEST: image_hamming_distance=27
+================================================================================
+
+Base image item_id: f451dcca35c15ae50a385c6f3740ca9f8939d33e736dd6c006e7d826d153a09e
+
+Calibration                                   | Pass   | Match    | Hamming  | Status       | Item ID       
+-------------------------------------------------------------------------------------------------------------------
+Exact match (should match)                    | ✓      | 100%     | 0        | exact_match  | f451dcca35c1...
+Different image (should NOT match)            | ✓      | -        | -        | no_match     | -             
+Cutoff right 6% (should match)                | ✗      | -        | -        | no_match     | -             
+Cutoff right 8% (should match)                | ✗      | -        | -        | no_match     | -             
+Cutoff right 10% (should match)               | ✗      | -        | -        | no_match     | -             
+Cutoff right 12% (should NOT match)           | ✓      | -        | -        | no_match     | -             
+Cutoff right 14% (should NOT match)           | ✓      | -        | -        | no_match     | -             
+Cutoff left 6% (should match)                 | ✗      | -        | -        | no_match     | -             
+Cutoff left 8% (should match)                 | ✗      | -        | -        | no_match     | -             
+Cutoff left 10% (should match)                | ✗      | -        | -        | no_match     | -             
+Cutoff left 12% (should NOT match)            | ✓      | -        | -        | no_match     | -             
+Cutoff left 14% (should NOT match)            | ✓      | -        | -        | no_match     | -             
+Cutoff top 6% (should match)                  | ✗      | -        | -        | no_match     | -             
+Cutoff top 8% (should match)                  | ✗      | -        | -        | no_match     | -             
+Cutoff top 10% (should match)                 | ✗      | -        | -        | no_match     | -             
+Cutoff top 12% (should NOT match)             | ✓      | -        | -        | no_match     | -             
+Cutoff top 14% (should NOT match)             | ✓      | -        | -        | no_match     | -             
+Cutoff bottom 6% (should match)               | ✗      | -        | -        | no_match     | -             
+Cutoff bottom 8% (should match)               | ✗      | -        | -        | no_match     | -             
+Cutoff bottom 10% (should match)              | ✗      | -        | -        | no_match     | -             
+Cutoff bottom 12% (should NOT match)          | ✓      | -        | -        | no_match     | -             
+Cutoff bottom 14% (should NOT match)          | ✓      | -        | -        | no_match     | -             
+Noise 6% (should match)                       | ✓      | 93%      | 2        | near_match   | f451dcca35c1...
+Noise 8% (should match)                       | ✓      | 93%      | 2        | near_match   | f451dcca35c1...
+Noise 10% (should match)                      | ✓      | 100%     | 0        | exact_match  | f451dcca35c1...
+Noise 12% (should NOT match)                  | ✓      | -        | -        | no_match     | -             
+Noise 14% (should NOT match)                  | ✓      | -        | -        | no_match     | -             
+Brightness 6% (should match)                  | ✓      | 100%     | 0        | exact_match  | f451dcca35c1...
+Brightness 8% (should match)                  | ✓      | 100%     | 0        | exact_match  | f451dcca35c1...
+Brightness 10% (should match)                 | ✓      | 93%      | 2        | near_match   | f451dcca35c1...
+Brightness 12% (should NOT match)             | ✗      | 93%      | 2        | near_match   | f451dcca35c1...
+Brightness 14% (should NOT match)             | ✗      | 93%      | 2        | near_match   | f451dcca35c1...
+Contrast 6% (should match)                    | ✓      | 93%      | 2        | near_match   | f451dcca35c1...
+Contrast 8% (should match)                    | ✗      | -        | -        | no_match     | -             
+Contrast 10% (should match)                   | ✗      | -        | -        | no_match     | -             
+Contrast 12% (should NOT match)               | ✓      | -        | -        | no_match     | -             
+Contrast 14% (should NOT match)               | ✓      | -        | -        | no_match     | -             
+Resize 6% (should match)                      | ✗      | -        | -        | no_match     | -             
+Resize 8% (should match)                      | ✓      | 93%      | 2        | near_match   | f451dcca35c1...
+Resize 10% (should match)                     | ✗      | -        | -        | no_match     | -             
+Resize 12% (should NOT match)                 | ✗      | 93%      | 2        | near_match   | f451dcca35c1...
+Resize 14% (should NOT match)                 | ✗      | 93%      | 2        | near_match   | f451dcca35c1...
+Grayscale (should match)                      | ✓      | 100%     | 0        | exact_match  | f451dcca35c1...
+JPEG 6% (should match)                        | ✓      | 93%      | 2        | near_match   | f451dcca35c1...
+JPEG 8% (should match)                        | ✓      | 93%      | 2        | near_match   | f451dcca35c1...
+JPEG 10% (should match)                       | ✓      | 93%      | 2        | near_match   | f451dcca35c1...
+JPEG 12% (should NOT match)                   | ✗      | 93%      | 2        | near_match   | f451dcca35c1...
+JPEG 14% (should NOT match)                   | ✗      | 93%      | 2        | near_match   | f451dcca35c1...
+Blur 6% (should match)                        | ✗      | -        | -        | no_match     | -             
+Blur 8% (should match)                        | ✗      | -        | -        | no_match     | -             
+Blur 10% (should match)                       | ✗      | -        | -        | no_match     | -             
+Blur 12% (should NOT match)                   | ✓      | -        | -        | no_match     | -             
+Blur 14% (should NOT match)                   | ✓      | -        | -        | no_match     | -             
+-------------------------------------------------------------------------------------------------------------------
+OVERALL                                       | 28/53  | 53%
+
+IMAGE_HAMMING_DISTANCE=27

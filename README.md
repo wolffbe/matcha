@@ -123,7 +123,7 @@ Given the latest results for each modality exported [here](./calibration/results
 
 | Modality | Test cases | Distance | Accuracy | Duration | Comment
 |----------|------------|----------|----------|----------|---------|
-| image    | 103 | 28       | 61%      | ~9s    | Calibrated exhaustively from 0-30
+| image    | 53 | 27       | 53%      | ~9s    | Calibrated exhaustively from 0-30
 | audio    | 57 | 60       | 56%      | ~23m      | Calibrated only with 60 with 3s segment sizes and 0.5s hops; requires more testing with larger and smaller distances (20, 30, 40, 50, 70, 80, 90, 100); segment and hop size seem reasonable
 | video    | 145 | 28/60       | 51%        | ~45m        | Calibrated only with 28 for video and 60 for audio; additional combinations of audio and image distances after testing both modalities individually could be further tested
 

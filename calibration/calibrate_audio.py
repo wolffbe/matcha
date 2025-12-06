@@ -7,9 +7,11 @@ from datetime import datetime
 from statistics import mean
 from pathlib import Path
 import time
+import sys
 
-BASE_URL = "http://localhost:8000"
+BASE_URL = os.environ.get("BASE_URL", "http://localhost:8000")
 TMP_DIR = "./tmp/audio_threshold_calibration"
+REQUEST_TIMEOUT = 300  # 5 min for transcription
 
 # Percentages for all tests
 # 12,14 should MATCH (≤15% modification, ≥85% remains)
@@ -48,8 +50,44 @@ def cleanup():
         parent.rmdir()
 
 
+def check_health():
+    """Check if the service is healthy before starting tests."""
+    print(f"Checking service health at {BASE_URL}...", end=" ", flush=True)
+    try:
+        r = requests.get(f"{BASE_URL}/health", timeout=10)
+        if r.status_code == 200:
+            print("OK")
+            return True
+        else:
+            print(f"FAILED (status {r.status_code})")
+            return False
+    except requests.exceptions.ConnectionError:
+        print("FAILED (connection refused)")
+        return False
+    except Exception as e:
+        print(f"FAILED ({e})")
+        return False
+
+
 def reset():
-    requests.post(f"{BASE_URL}/reset")
+    try:
+        r = requests.post(f"{BASE_URL}/reset", timeout=30)
+        if r.status_code == 200:
+            return r.json()
+        return None
+    except Exception as e:
+        print(f"Reset failed: {e}")
+        return None
+
+
+def get_stats():
+    try:
+        r = requests.get(f"{BASE_URL}/stats", timeout=10)
+        if r.status_code == 200:
+            return r.json()
+        return None
+    except:
+        return None
 
 
 def create_speech_audio(filename, text, speed=140):
@@ -147,7 +185,6 @@ def create_trimmed_middle(input_path, output_name, trim_percent):
 
 
 def create_with_noise(input_path, output_name, noise_percent):
-    """Add white noise at the given percentage level (0-100)."""
     path = os.path.join(TMP_DIR, output_name)
     duration = get_duration(input_path)
     noise_weight = noise_percent / 100.0
@@ -164,7 +201,6 @@ def create_with_noise(input_path, output_name, noise_percent):
 
 
 def create_quality_reduced(input_path, output_name, reduction_percent):
-    """Reduce quality by the given percentage."""
     path = os.path.join(TMP_DIR, output_name)
     quality_factor = 1.0 - (reduction_percent / 100.0)
     bitrate = int(128 * (quality_factor ** 6))
@@ -210,30 +246,54 @@ def create_speed_adjusted(input_path, output_name, speed_factor):
     return path
 
 
+def hash_file(file_path):
+    """Hash and index a file."""
+    try:
+        with open(file_path, "rb") as f:
+            r = requests.post(
+                f"{BASE_URL}/hash",
+                files={"file": (os.path.basename(file_path), f, "audio/mpeg")},
+                timeout=REQUEST_TIMEOUT
+            )
+        if r.status_code == 200:
+            return r.json()
+        else:
+            print(f"Hash failed ({r.status_code}): {r.text}")
+            return None
+    except Exception as e:
+        print(f"Hash error: {e}")
+        return None
+
+
 def query_match(query_path, audio_hamming_distance):
     """Query against already-indexed base audio."""
-    with open(query_path, "rb") as f:
-        r = requests.post(
-            f"{BASE_URL}/match?audio_hamming_distance={audio_hamming_distance}",
-            files={"file": (os.path.basename(query_path), f, "audio/mpeg")}
-        )
-    if r.status_code != 200:
-        print(f"Match failed: {r.json()}")
+    try:
+        with open(query_path, "rb") as f:
+            r = requests.post(
+                f"{BASE_URL}/match?audio_hamming_distance={audio_hamming_distance}",
+                files={"file": (os.path.basename(query_path), f, "audio/mpeg")},
+                timeout=REQUEST_TIMEOUT
+            )
+        if r.status_code != 200:
+            print(f"Match failed ({r.status_code}): {r.text}")
+            return {"matched": False, "audio": None, "transcript": None, "status": None, "audio_hamming_distance": None}
+
+        matches = r.json()
+        if not matches:
+            return {"matched": False, "audio": None, "transcript": None, "status": None, "audio_hamming_distance": None}
+
+        best = matches[0]
+        matched = best.get("status") != "no_match"
+        return {
+            "matched": matched,
+            "audio": best.get("audio_match_percent"),
+            "transcript": best.get("transcript_match_percent"),
+            "status": best.get("status"),
+            "audio_hamming_distance": best.get("audio_hamming_distance")
+        }
+    except Exception as e:
+        print(f"Match error: {e}")
         return {"matched": False, "audio": None, "transcript": None, "status": None, "audio_hamming_distance": None}
-    
-    matches = r.json()
-    if not matches:
-        return {"matched": False, "audio": None, "transcript": None, "status": None, "audio_hamming_distance": None}
-    
-    best = matches[0]
-    matched = best.get("status") != "no_match"
-    return {
-        "matched": matched,
-        "audio": best.get("audio_match_percent"),
-        "transcript": best.get("transcript_match_percent"),
-        "status": best.get("status"),
-        "audio_hamming_distance": best.get("audio_hamming_distance")
-    }
 
 
 def run_calibrations_for_threshold(audio_hamming_distance, base_path, different_path):
@@ -242,102 +302,75 @@ def run_calibrations_for_threshold(audio_hamming_distance, base_path, different_
     total_correct = 0
     total_calibrations = 0
 
-    # Build test cases: (key, name, expected_match, create_fn, is_trim_test)
     test_cases = [
         ("exact", "Exact match", True, lambda: base_path, False),
         ("different", "Different audio", False, lambda: different_path, False),
     ]
 
-    # Trim start tests (index trimmed, query with base)
     for pct in PERCENTAGES:
         expected = pct <= MATCH_THRESHOLD
-        key = f"trim_start_{pct}"
-        name = f"Trim start {pct}%"
-        test_cases.append((key, name, expected, lambda p=pct: create_trimmed_start(base_path, f"trim_start_{p}.mp3", p), True))
+        test_cases.append((f"trim_start_{pct}", f"Trim start {pct}%", expected,
+                          lambda p=pct: create_trimmed_start(base_path, f"trim_start_{p}.mp3", p), True))
 
-    # Trim end tests
     for pct in PERCENTAGES:
         expected = pct <= MATCH_THRESHOLD
-        key = f"trim_end_{pct}"
-        name = f"Trim end {pct}%"
-        test_cases.append((key, name, expected, lambda p=pct: create_trimmed_end(base_path, f"trim_end_{p}.mp3", p), True))
+        test_cases.append((f"trim_end_{pct}", f"Trim end {pct}%", expected,
+                          lambda p=pct: create_trimmed_end(base_path, f"trim_end_{p}.mp3", p), True))
 
-    # Trim middle tests
     for pct in PERCENTAGES:
         expected = pct <= MATCH_THRESHOLD
-        key = f"trim_middle_{pct}"
-        name = f"Trim middle {pct}%"
-        test_cases.append((key, name, expected, lambda p=pct: create_trimmed_middle(base_path, f"trim_middle_{p}.mp3", p), True))
+        test_cases.append((f"trim_middle_{pct}", f"Trim middle {pct}%", expected,
+                          lambda p=pct: create_trimmed_middle(base_path, f"trim_middle_{p}.mp3", p), True))
 
-    # Noise tests
     for pct in PERCENTAGES:
         expected = pct <= MATCH_THRESHOLD
-        key = f"noise_{pct}"
-        name = f"Noise {pct}%"
-        test_cases.append((key, name, expected, lambda p=pct: create_with_noise(base_path, f"noise_{p}.mp3", p), False))
+        test_cases.append((f"noise_{pct}", f"Noise {pct}%", expected,
+                          lambda p=pct: create_with_noise(base_path, f"noise_{p}.mp3", p), False))
 
-    # Quality reduced tests
     for pct in PERCENTAGES:
         expected = pct <= MATCH_THRESHOLD
-        key = f"quality_{pct}"
-        name = f"Quality reduced {pct}%"
-        test_cases.append((key, name, expected, lambda p=pct: create_quality_reduced(base_path, f"quality_{p}.mp3", p), False))
+        test_cases.append((f"quality_{pct}", f"Quality reduced {pct}%", expected,
+                          lambda p=pct: create_quality_reduced(base_path, f"quality_{p}.mp3", p), False))
 
-    # Mono - single test (binary operation)
     test_cases.append(("mono", "Mono", True, lambda: create_mono(base_path, "mono.mp3"), False))
 
-    # Volume down tests
     for pct in PERCENTAGES:
         expected = pct <= MATCH_THRESHOLD
-        key = f"volume_down_{pct}"
-        name = f"Volume -{pct}%"
         factor = 1.0 - pct / 100.0
-        test_cases.append((key, name, expected, lambda f=factor, p=pct: create_volume_adjusted(base_path, f"vol_down_{p}.mp3", f), False))
+        test_cases.append((f"volume_down_{pct}", f"Volume -{pct}%", expected,
+                          lambda f=factor, p=pct: create_volume_adjusted(base_path, f"vol_down_{p}.mp3", f), False))
 
-    # Volume up tests
     for pct in PERCENTAGES:
         expected = pct <= MATCH_THRESHOLD
-        key = f"volume_up_{pct}"
-        name = f"Volume +{pct}%"
         factor = 1.0 + pct / 100.0
-        test_cases.append((key, name, expected, lambda f=factor, p=pct: create_volume_adjusted(base_path, f"vol_up_{p}.mp3", f), False))
+        test_cases.append((f"volume_up_{pct}", f"Volume +{pct}%", expected,
+                          lambda f=factor, p=pct: create_volume_adjusted(base_path, f"vol_up_{p}.mp3", f), False))
 
-    # Speed down tests
     for pct in PERCENTAGES:
         expected = pct <= MATCH_THRESHOLD
-        key = f"speed_down_{pct}"
-        name = f"Speed -{pct}%"
         factor = 1.0 - pct / 100.0
-        test_cases.append((key, name, expected, lambda f=factor, p=pct: create_speed_adjusted(base_path, f"speed_down_{p}.mp3", f), False))
+        test_cases.append((f"speed_down_{pct}", f"Speed -{pct}%", expected,
+                          lambda f=factor, p=pct: create_speed_adjusted(base_path, f"speed_down_{p}.mp3", f), False))
 
-    # Speed up tests
     for pct in PERCENTAGES:
         expected = pct <= MATCH_THRESHOLD
-        key = f"speed_up_{pct}"
-        name = f"Speed +{pct}%"
         factor = 1.0 + pct / 100.0
-        test_cases.append((key, name, expected, lambda f=factor, p=pct: create_speed_adjusted(base_path, f"speed_up_{p}.mp3", f), False))
+        test_cases.append((f"speed_up_{pct}", f"Speed +{pct}%", expected,
+                          lambda f=factor, p=pct: create_speed_adjusted(base_path, f"speed_up_{p}.mp3", f), False))
 
     for key, name, expected_match, create_fn, is_trim_test in test_cases:
         modified_path = create_fn()
-        
+
         if is_trim_test:
-            # For trim tests: index trimmed version, query with base
             reset()
-            with open(modified_path, "rb") as f:
-                r = requests.post(
-                    f"{BASE_URL}/hash",
-                    files={"file": (os.path.basename(modified_path), f, "audio/mpeg")}
-                )
-            if r.status_code != 200:
-                print(f"Hash failed for {key}: {r.json()}")
+            hash_result = hash_file(modified_path)
+            if not hash_result:
                 result = {"matched": False, "audio": None, "transcript": None, "status": None, "audio_hamming_distance": None}
             else:
                 result = query_match(base_path, audio_hamming_distance)
         else:
-            # For other tests: query modified against base (already indexed)
             result = query_match(modified_path, audio_hamming_distance)
-        
+
         correct = result["matched"] == expected_match
 
         results[key] = {
@@ -357,11 +390,8 @@ def run_calibrations_for_threshold(audio_hamming_distance, base_path, different_
 
     audio_values = [v["audio"] for v in results.values() if v.get("audio") is not None]
     transcript_values = [v["transcript"] for v in results.values() if v.get("transcript") is not None]
-    both_pairs = [((v["audio"] + v["transcript"]) / 2.0) for v in results.values() if v.get("audio") is not None and v.get("transcript") is not None]
-
-    avg_audio = mean(audio_values) if audio_values else None
-    avg_transcript = mean(transcript_values) if transcript_values else None
-    avg_both = mean(both_pairs) if both_pairs else None
+    both_pairs = [((v["audio"] + v["transcript"]) / 2.0) for v in results.values()
+                  if v.get("audio") is not None and v.get("transcript") is not None]
 
     return {
         "audio_hamming_distance": audio_hamming_distance,
@@ -369,22 +399,22 @@ def run_calibrations_for_threshold(audio_hamming_distance, base_path, different_
         "overall_correct": total_correct,
         "overall_total": total_calibrations,
         "overall_rate": total_correct / total_calibrations if total_calibrations else 0,
-        "avg_audio": avg_audio,
-        "avg_transcript": avg_transcript,
-        "avg_both": avg_both
+        "avg_audio": mean(audio_values) if audio_values else None,
+        "avg_transcript": mean(transcript_values) if transcript_values else None,
+        "avg_both": mean(both_pairs) if both_pairs else None
     }
 
 
 def find_optimal_threshold(hamming_values):
     start_time = time.time()
-    
+
     print(f"Calibrating audio Hamming thresholds: {hamming_values}")
     print("=" * 80)
     print()
     print("Creating base audio with speech...", end=" ", flush=True)
     base_path, duration = create_speech_audio("base.mp3", LOREM_IPSUM, speed=130)
     print(f"done ({duration:.1f}s)")
-    
+
     print("Creating different audio...", end=" ", flush=True)
     different_path, diff_duration = create_speech_audio("different.mp3", DIFFERENT_TEXT, speed=160)
     print(f"done ({diff_duration:.1f}s)")
@@ -393,102 +423,67 @@ def find_optimal_threshold(hamming_values):
     all_results = []
     for hamming in hamming_values:
         print(f"Calibrating audio_hamming_distance={hamming}...", end=" ", flush=True)
-        
-        # Reset and index base audio for non-trim tests
+
         reset()
-        with open(base_path, "rb") as f:
-            r = requests.post(
-                f"{BASE_URL}/hash",
-                files={"file": ("base.mp3", f, "audio/mpeg")}
-            )
-        if r.status_code != 200:
-            print(f"Hash failed: {r.json()}")
+        hash_result = hash_file(base_path)
+        if not hash_result:
+            print("Hash failed, skipping")
             continue
-        
+
         result = run_calibrations_for_threshold(hamming, base_path, different_path)
         all_results.append(result)
         print(f"{result['overall_correct']}/{result['overall_total']} ({result['overall_rate']*100:.0f}%)")
 
     elapsed_time = time.time() - start_time
-    best = max(all_results, key=lambda x: x["overall_rate"])
+    best = max(all_results, key=lambda x: x["overall_rate"]) if all_results else None
     return best, all_results, elapsed_time
 
 
 def format_results(stats):
-    """Format results as a string for both printing and file export."""
     lines = []
 
-    # Build display order
     test_display = [
         ("exact", "Exact match (should match)"),
         ("different", "Different audio (should NOT match)"),
     ]
 
-    # Add trim start tests
     for pct in PERCENTAGES:
-        key = f"trim_start_{pct}"
         expected = "match" if pct <= MATCH_THRESHOLD else "NOT match"
-        name = f"Trim start {pct}% (should {expected})"
-        test_display.append((key, name))
+        test_display.append((f"trim_start_{pct}", f"Trim start {pct}% (should {expected})"))
 
-    # Add trim end tests
     for pct in PERCENTAGES:
-        key = f"trim_end_{pct}"
         expected = "match" if pct <= MATCH_THRESHOLD else "NOT match"
-        name = f"Trim end {pct}% (should {expected})"
-        test_display.append((key, name))
+        test_display.append((f"trim_end_{pct}", f"Trim end {pct}% (should {expected})"))
 
-    # Add trim middle tests
     for pct in PERCENTAGES:
-        key = f"trim_middle_{pct}"
         expected = "match" if pct <= MATCH_THRESHOLD else "NOT match"
-        name = f"Trim middle {pct}% (should {expected})"
-        test_display.append((key, name))
+        test_display.append((f"trim_middle_{pct}", f"Trim middle {pct}% (should {expected})"))
 
-    # Add noise tests
     for pct in PERCENTAGES:
-        key = f"noise_{pct}"
         expected = "match" if pct <= MATCH_THRESHOLD else "NOT match"
-        name = f"Noise {pct}% (should {expected})"
-        test_display.append((key, name))
+        test_display.append((f"noise_{pct}", f"Noise {pct}% (should {expected})"))
 
-    # Add quality tests
     for pct in PERCENTAGES:
-        key = f"quality_{pct}"
         expected = "match" if pct <= MATCH_THRESHOLD else "NOT match"
-        name = f"Quality reduced {pct}% (should {expected})"
-        test_display.append((key, name))
+        test_display.append((f"quality_{pct}", f"Quality reduced {pct}% (should {expected})"))
 
-    # Add mono
     test_display.append(("mono", "Mono (should match)"))
 
-    # Add volume down tests
     for pct in PERCENTAGES:
-        key = f"volume_down_{pct}"
         expected = "match" if pct <= MATCH_THRESHOLD else "NOT match"
-        name = f"Volume -{pct}% (should {expected})"
-        test_display.append((key, name))
+        test_display.append((f"volume_down_{pct}", f"Volume -{pct}% (should {expected})"))
 
-    # Add volume up tests
     for pct in PERCENTAGES:
-        key = f"volume_up_{pct}"
         expected = "match" if pct <= MATCH_THRESHOLD else "NOT match"
-        name = f"Volume +{pct}% (should {expected})"
-        test_display.append((key, name))
+        test_display.append((f"volume_up_{pct}", f"Volume +{pct}% (should {expected})"))
 
-    # Add speed down tests
     for pct in PERCENTAGES:
-        key = f"speed_down_{pct}"
         expected = "match" if pct <= MATCH_THRESHOLD else "NOT match"
-        name = f"Speed -{pct}% (should {expected})"
-        test_display.append((key, name))
+        test_display.append((f"speed_down_{pct}", f"Speed -{pct}% (should {expected})"))
 
-    # Add speed up tests
     for pct in PERCENTAGES:
-        key = f"speed_up_{pct}"
         expected = "match" if pct <= MATCH_THRESHOLD else "NOT match"
-        name = f"Speed +{pct}% (should {expected})"
-        test_display.append((key, name))
+        test_display.append((f"speed_up_{pct}", f"Speed +{pct}% (should {expected})"))
 
     lines.append("")
     lines.append(f"{'Calibration':<40} | {'Pass':<6} | {'Audio':<8} | {'Trans':<8} | {'Hamming':<10} | {'Status':<12}")
@@ -518,7 +513,6 @@ def format_results(stats):
 
 
 def format_all_results(all_results):
-    """Format all threshold results as a string."""
     lines = []
     lines.append("")
     lines.append("=" * 80)
@@ -536,7 +530,6 @@ def format_all_results(all_results):
 
 
 def format_duration(seconds):
-    """Format duration in human-readable format."""
     if seconds < 60:
         return f"{seconds:.1f}s"
     elif seconds < 3600:
@@ -550,16 +543,7 @@ def format_duration(seconds):
         return f"{hours}h {mins}m {secs:.1f}s"
 
 
-def print_results(stats):
-    print(format_results(stats))
-
-
-def print_all_results(all_results):
-    print(format_all_results(all_results))
-
-
 def export_results(best, all_results, elapsed_time, filename="./results/calibrate_audio.txt"):
-    """Export the final results to a file."""
     os.makedirs(os.path.dirname(filename), exist_ok=True)
 
     lines = []
@@ -567,6 +551,7 @@ def export_results(best, all_results, elapsed_time, filename="./results/calibrat
     lines.append("Audio Hamming Distance Calibration Results")
     lines.append(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     lines.append(f"Duration: {format_duration(elapsed_time)}")
+    lines.append(f"Service URL: {BASE_URL}")
     lines.append("=" * 80)
     lines.append("")
     lines.append("Calibration criteria (threshold = 85%):")
@@ -580,9 +565,6 @@ def export_results(best, all_results, elapsed_time, filename="./results/calibrat
     lines.append("  - Mono: always should match")
     lines.append("  - Volume: ±pct% volume change")
     lines.append("  - Speed: ±pct% speed change")
-    lines.append("")
-    lines.append("Note: Audio now uses Hamming distance (0-256 bits) instead of L2.")
-    lines.append("Chromaprint fingerprints are converted to 256-bit binary vectors.")
     lines.append("")
     lines.append(format_all_results(all_results))
     lines.append("")
@@ -604,28 +586,36 @@ def main():
     print("Finding Optimal Audio Hamming Distance")
     print("=" * 80)
     print()
+
+    if not check_health():
+        print(f"\nService not available at {BASE_URL}")
+        print("Start the service with: docker-compose up -d")
+        sys.exit(1)
+
+    print()
     print("Calibration criteria (threshold = 85%):")
     print("  - 12,14% modification: should MATCH")
     print("  - 16,18% modification: should NOT MATCH")
     print()
     print("Tests: Trim (start/end/middle), Noise, Quality, Mono, Volume (±), Speed (±)")
     print()
-    print("Note: Audio now uses Hamming distance (0-256 bits) like video/image.")
-    print()
 
     try:
         setup()
-        # Audio hamming range: 0-256 bits, testing reasonable values
-        # Lower = stricter, higher = more permissive
         best, all_results, elapsed_time = find_optimal_threshold(
             hamming_values=[28]
         )
-        print_all_results(all_results)
+
+        if not best:
+            print("No results collected")
+            sys.exit(1)
+
+        print(format_all_results(all_results))
         print()
         print("=" * 80)
         print(f"BEST: audio_hamming_distance={best['audio_hamming_distance']}")
         print("=" * 80)
-        print_results(best)
+        print(format_results(best))
         print()
         print(f"AUDIO_HAMMING_DISTANCE={best['audio_hamming_distance']}")
         print(f"\nCompleted in {format_duration(elapsed_time)}")
