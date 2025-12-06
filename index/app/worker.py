@@ -1,7 +1,7 @@
+# index/app/worker.py
 import json
 import logging
 from redis import Redis
-
 from app.config import settings
 from app.services.index import IndexService
 
@@ -15,15 +15,12 @@ logger = logging.getLogger(__name__)
 def main():
     redis_conn = Redis.from_url(settings.redis_url)
     index_service = IndexService()
-
     logger.info(f"Index worker started, listening on {settings.request_queue}")
 
     while True:
         try:
-            # Blocking pop from request queue
             _, message = redis_conn.blpop(settings.request_queue)
             request = json.loads(message)
-
             request_id = request.get("request_id")
             action = request.get("action")
             reply_queue = f"{settings.result_queue_prefix}{request_id}"
@@ -43,8 +40,8 @@ def main():
                     response = {"success": True, "result": result}
 
                 elif action == "match":
-                    results = index_service.match(
-                        query_type=request["query_type"],
+                    results = index_service.match_item(
+                        query_type=request.get("query_type"),
                         video_hashes=request.get("video_hashes"),
                         audio_segments=request.get("audio_segments"),
                         transcript_segments=request.get("transcript_segments"),
@@ -59,15 +56,15 @@ def main():
                     response = {"success": True, "results": results}
 
                 elif action == "delete":
-                    deleted = index_service.delete(request["item_id"])
-                    response = {"success": True, "deleted": deleted}
+                    result = index_service.delete_item(request["item_id"])
+                    response = {"success": True, "deleted": result.get("deleted", True)}
 
                 elif action == "reset":
-                    count = index_service.reset()
-                    response = {"success": True, "cleared": count}
+                    result = index_service.reset()
+                    response = {"success": True, "reset": result.get("reset", True)}
 
                 elif action == "stats":
-                    stats = index_service.stats()
+                    stats = index_service.get_stats()
                     response = {"success": True, "stats": stats}
 
                 else:
@@ -77,10 +74,8 @@ def main():
                 logger.error(f"Request {request_id[:8]}... failed: {e}")
                 response = {"success": False, "error": str(e)}
 
-            # Push response to reply queue
             redis_conn.rpush(reply_queue, json.dumps(response))
-            redis_conn.expire(reply_queue, 300)  # 5 min TTL
-
+            redis_conn.expire(reply_queue, 300)
             logger.info(f"Completed {action} request {request_id[:8]}...")
 
         except Exception as e:

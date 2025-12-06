@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     video_threshold: float = 0.85
     audio_threshold: float = 0.85
     transcript_threshold: float = 0.85
-    image_hamming_distance: int = 27
+    image_hamming_distance: int = 20
     video_hamming_distance: int = 27
     audio_hamming_distance: int = 60
 

@@ -1,3 +1,4 @@
+# hashing/app/routes.py
 from fastapi import FastAPI, UploadFile, File, HTTPException, Query
 import hashlib
 import os
@@ -98,10 +99,10 @@ async def hash_media(file: UploadFile = File(...), language: str = Query(None)):
         return HashResponse(
             item_id=item_id,
             type=media_type,
-            indexed=index_result["indexed"],
-            num_video_hashes=index_result["num_video_hashes"],
-            num_audio_segments=index_result["num_audio_segments"],
-            num_transcript_segments=index_result["num_transcript_segments"],
+            indexed=index_result.get("indexed", True),
+            num_video_hashes=len(video_hashes),
+            num_audio_segments=len(audio_segments),
+            num_transcript_segments=len(transcript_segments),
             transcript_text=transcript_text
         )
 
@@ -203,8 +204,8 @@ async def delete_item(item_id: str):
 @app.post("/reset", response_model=ResetResponse)
 async def reset_index():
     try:
-        count = index_client.reset()
-        return ResetResponse(cleared=count)
+        index_client.reset()
+        return ResetResponse(reset=True)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

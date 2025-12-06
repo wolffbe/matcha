@@ -1,324 +1,388 @@
-import logging
-import faiss
+# index/app/services/index.py
 import numpy as np
-import re
-from collections import defaultdict
-from datasketch import MinHash, MinHashLSH
-
-from app.services.hashing import HashingService
+from qdrant_client import QdrantClient
+from qdrant_client.models import (
+    VectorParams, Distance, PointStruct,
+    Filter, FieldCondition, MatchValue,
+    HnswConfigDiff
+)
+from datasketch import MinHashLSH, MinHash
+import os
+import uuid
+import logging
+from .hashing import hex_to_bytes, fingerprint_to_binary
 
 logger = logging.getLogger(__name__)
 
+QDRANT_HOST = os.environ.get("QDRANT_HOST", "localhost")
+QDRANT_PORT = int(os.environ.get("QDRANT_PORT", 6333))
+
+# Collection names
+VIDEO_COLLECTION = "video_hashes"
+AUDIO_COLLECTION = "audio_hashes"
+IMAGE_COLLECTION = "image_hashes"
+
+# Vector dimensions (256-bit hashes = 256 dimensions as binary)
+HASH_DIM = 256
+
 
 class IndexService:
-
     def __init__(self):
-        self.video_index = faiss.IndexBinaryFlat(256)
-        self.audio_index = faiss.IndexBinaryFlat(256)
-        self.lsh = MinHashLSH(threshold=0.5, num_perm=128)
+        self.client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
+        self._init_collections()
+        
+        # Transcript LSH (keep in-memory for now)
+        self.transcript_lsh = MinHashLSH(threshold=0.5, num_perm=128)
+        self.transcript_minhashes: dict[str, MinHash] = {}
+        self.transcript_segments: dict[str, list] = {}
 
-        self.items = {}
-        self.video_metadata = []
-        self.audio_metadata = []
-        self.transcript_metadata = {}
+    def _init_collections(self):
+        """Initialize Qdrant collections with HNSW indexing."""
+        
+        collections = [VIDEO_COLLECTION, AUDIO_COLLECTION, IMAGE_COLLECTION]
+        existing = {c.name for c in self.client.get_collections().collections}
+        
+        for collection_name in collections:
+            if collection_name not in existing:
+                self.client.create_collection(
+                    collection_name=collection_name,
+                    vectors_config=VectorParams(
+                        size=HASH_DIM,
+                        distance=Distance.EUCLID
+                    ),
+                    hnsw_config=HnswConfigDiff(
+                        m=16,
+                        ef_construct=100,
+                    )
+                )
 
-        logger.info("IndexService initialized")
+    def _extract_hash(self, hash_item) -> str:
+        """Extract hash hex string from various formats."""
+        if isinstance(hash_item, dict):
+            return hash_item.get("hex") or hash_item.get("hash") or hash_item.get("hash_hex", "")
+        elif isinstance(hash_item, str):
+            return hash_item
+        else:
+            return str(hash_item) if hash_item else ""
 
-    def _text_to_shingles(self, text: str, k: int = 3) -> set:
-        text = text.lower()
-        text = re.sub(r"[^\w\s]", " ", text)
-        words = [w for w in text.split() if w]
-        if len(words) < k:
-            return set([" ".join(words)]) if words else set()
-        return set(" ".join(words[i:i+k]) for i in range(len(words) - k + 1))
+    def _hash_to_vector(self, hash_hex: str) -> list[float]:
+        """Convert hex hash to binary vector (256 dimensions of 0.0 or 1.0)."""
+        hash_bytes = hex_to_bytes(hash_hex)
+        binary = np.unpackbits(np.frombuffer(hash_bytes, dtype=np.uint8))
+        return binary.astype(np.float32).tolist()
 
-    def _create_minhash(self, text: str) -> MinHash:
-        m = MinHash(num_perm=128)
-        for shingle in self._text_to_shingles(text):
-            m.update(shingle.encode('utf-8'))
-        return m
+    def _fingerprint_to_vector(self, fingerprint: list[int]) -> list[float]:
+        """Convert Chromaprint fingerprint to binary vector."""
+        binary = fingerprint_to_binary(fingerprint)
+        # Pad or truncate to 256 bits (32 bytes)
+        if len(binary) < 32:
+            binary = binary + b'\x00' * (32 - len(binary))
+        elif len(binary) > 32:
+            binary = binary[:32]
+        bits = np.unpackbits(np.frombuffer(binary, dtype=np.uint8))
+        return bits.astype(np.float32).tolist()
+
+    def _euclidean_to_hamming(self, euclidean_dist: float) -> int:
+        """Convert Euclidean distance back to Hamming distance for binary vectors."""
+        return int(round(euclidean_dist ** 2))
+
+    def _hamming_to_euclidean(self, hamming_dist: int) -> float:
+        """Convert Hamming threshold to Euclidean threshold."""
+        return np.sqrt(hamming_dist)
 
     def add_item(
         self,
         item_id: str,
         item_type: str,
-        video_hashes: list[dict] | None = None,
-        audio_segments: list[dict] | None = None,
-        transcript_segments: list[dict] | None = None,
-        transcript_text: str | None = None
+        video_hashes: list = None,
+        audio_segments: list[dict] = None,
+        transcript_segments: list[dict] = None,
+        **kwargs
     ) -> dict:
-        if item_id in self.items:
-            item = self.items[item_id]
-            return {
-                "item_id": item_id,
-                "indexed": False,
-                "num_video_hashes": item.get("num_video_hashes", 0),
-                "num_audio_segments": item.get("num_audio_segments", 0),
-                "num_transcript_segments": item.get("num_transcript_segments", 0)
-            }
-
-        num_video = 0
-        num_audio = 0
-        num_transcript = 0
-
+        """Add item to indexes."""
+        
+        # Add video/image hashes
         if video_hashes:
-            for vh in video_hashes:
-                hash_bytes = HashingService.hex_to_bytes(vh["hex"])
-                self.video_index.add(np.array([hash_bytes], dtype=np.uint8))
-                self.video_metadata.append({
-                    "item_id": item_id,
-                    "frame_number": vh["frame_number"],
-                    "timestamp": vh["timestamp"]
-                })
-                num_video += 1
+            collection = IMAGE_COLLECTION if item_type == "image" else VIDEO_COLLECTION
+            points = []
+            for i, hash_item in enumerate(video_hashes):
+                hash_hex = self._extract_hash(hash_item)
+                
+                if not hash_hex or len(hash_hex) != 64:
+                    logger.warning(f"Skipping invalid hash: length={len(hash_hex) if hash_hex else 0}")
+                    continue
+                
+                point_id = str(uuid.uuid4())
+                vector = self._hash_to_vector(hash_hex)
+                points.append(PointStruct(
+                    id=point_id,
+                    vector=vector,
+                    payload={
+                        "item_id": item_id,
+                        "frame_index": i,
+                        "hash_hex": hash_hex
+                    }
+                ))
+            if points:
+                self.client.upsert(collection_name=collection, points=points)
+                logger.info(f"Added {len(points)} hashes to {collection} for item {item_id}")
 
+        # Add audio segments
         if audio_segments:
-            for seg in audio_segments:
-                binary = HashingService.fingerprint_to_binary(seg["fingerprint"])
-                self.audio_index.add(np.array([binary], dtype=np.uint8))
-                self.audio_metadata.append({
-                    "item_id": item_id,
-                    "start_time": seg["start_time"],
-                    "duration": seg["duration"]
-                })
-                num_audio += 1
-
-        if transcript_segments:
-            for i, seg in enumerate(transcript_segments):
-                text = seg.get("text", "")
-                if text.strip():
-                    minhash = self._create_minhash(text)
-                    key = f"{item_id}_seg_{i}"
-                    try:
-                        self.lsh.insert(key, minhash)
-                        self.transcript_metadata[key] = {
+            points = []
+            for i, seg in enumerate(audio_segments):
+                fingerprint = seg.get("fingerprint", [])
+                if fingerprint:
+                    point_id = str(uuid.uuid4())
+                    vector = self._fingerprint_to_vector(fingerprint)
+                    points.append(PointStruct(
+                        id=point_id,
+                        vector=vector,
+                        payload={
                             "item_id": item_id,
                             "segment_index": i,
-                            "text": text,
-                            "minhash": minhash
+                            "start_time": seg.get("start_time", 0),
+                            "end_time": seg.get("end_time", 0)
                         }
-                        num_transcript += 1
-                    except ValueError:
-                        pass
+                    ))
+            if points:
+                self.client.upsert(collection_name=AUDIO_COLLECTION, points=points)
+                logger.info(f"Added {len(points)} audio segments for item {item_id}")
 
-        self.items[item_id] = {
-            "type": item_type,
-            "num_video_hashes": num_video,
-            "num_audio_segments": num_audio,
-            "num_transcript_segments": num_transcript,
-            "transcript_text": transcript_text
-        }
+        # Add transcript segments (MinHash LSH)
+        if transcript_segments:
+            self.transcript_segments[item_id] = transcript_segments
+            combined_text = " ".join(s.get("text", "") for s in transcript_segments)
+            if combined_text.strip():
+                mh = MinHash(num_perm=128)
+                for word in combined_text.lower().split():
+                    mh.update(word.encode('utf-8'))
+                self.transcript_minhashes[item_id] = mh
+                try:
+                    self.transcript_lsh.insert(item_id, mh)
+                except ValueError:
+                    pass  # Already exists
 
-        logger.info(f"Indexed {item_type} {item_id[:12]}... (v={num_video}, a={num_audio}, t={num_transcript})")
+        return {"indexed": True, "item_id": item_id}
 
-        return {
-            "item_id": item_id,
-            "indexed": True,
-            "num_video_hashes": num_video,
-            "num_audio_segments": num_audio,
-            "num_transcript_segments": num_transcript
-        }
-
-    def match(
+    def match_item(
         self,
-        query_type: str,
-        video_hashes: list[dict] | None = None,
-        audio_segments: list[dict] | None = None,
-        transcript_segments: list[dict] | None = None,
-        image_threshold: float = 0.90,
-        video_threshold: float = 0.85,
-        audio_threshold: float = 0.85,
-        transcript_threshold: float = 0.90,
-        image_hamming_distance: int = 31,
-        video_hamming_distance: int = 31,
-        audio_hamming_distance: int = 31
+        item_type: str = None,
+        query_type: str = None,
+        video_hashes: list = None,
+        audio_segments: list[dict] = None,
+        transcript_segments: list[dict] = None,
+        image_hamming_distance: int = 10,
+        video_hamming_distance: int = 28,
+        audio_hamming_distance: int = 28,
+        transcript_threshold: float = 0.85,
+        **kwargs
     ) -> list[dict]:
+        """Find matching items."""
+        
+        # Support both item_type and query_type
+        media_type = item_type or query_type or "unknown"
+        candidates = {}
 
-        item_min_image_hamming = defaultdict(lambda: 999)
-        item_min_video_hamming = defaultdict(lambda: 999)
-        item_min_audio_hamming = defaultdict(lambda: 999)
-        item_transcript_matches = defaultdict(float)
+        # Match video/image hashes
+        if video_hashes:
+            collection = IMAGE_COLLECTION if media_type == "image" else VIDEO_COLLECTION
+            hamming_threshold = image_hamming_distance if media_type == "image" else video_hamming_distance
+            
+            match_counts = {}
+            min_distances = {}
+            
+            for hash_item in video_hashes:
+                hash_hex = self._extract_hash(hash_item)
+                
+                if not hash_hex or len(hash_hex) != 64:
+                    continue
+                
+                vector = self._hash_to_vector(hash_hex)
+                
+                # Use query_points instead of search (new API)
+                results = self.client.query_points(
+                    collection_name=collection,
+                    query=vector,
+                    limit=10
+                )
+                
+                for point in results.points:
+                    hit_item_id = point.payload.get("item_id")
+                    # score is distance in Qdrant
+                    hamming = self._euclidean_to_hamming(point.score)
+                    
+                    if hamming <= hamming_threshold:
+                        match_counts[hit_item_id] = match_counts.get(hit_item_id, 0) + 1
+                        if hit_item_id not in min_distances or hamming < min_distances[hit_item_id]:
+                            min_distances[hit_item_id] = hamming
 
-        if video_hashes and self.video_index.ntotal > 0:
-            search_hamming = max(image_hamming_distance, video_hamming_distance)
+            for cand_id, count in match_counts.items():
+                match_pct = (1 - min_distances[cand_id] / 256) * 100
+                key = "image" if media_type == "image" else "video"
+                candidates[cand_id] = candidates.get(cand_id, {})
+                candidates[cand_id][f"{key}_match_percent"] = match_pct
+                candidates[cand_id][f"{key}_hamming_distance"] = min_distances[cand_id]
+                candidates[cand_id]["match_count"] = count
 
-            for vh in video_hashes:
-                hash_bytes = HashingService.hex_to_bytes(vh["hex"])
-                hash_array = np.array([hash_bytes], dtype=np.uint8)
-                lims, D, I = self.video_index.range_search(hash_array, search_hamming + 1)
-
-                for j in range(lims[0], lims[1]):
-                    idx = I[j]
-                    dist = int(D[j])
-                    if idx < len(self.video_metadata):
-                        meta = self.video_metadata[idx]
-                        target_id = meta["item_id"]
-                        target_type = self.items.get(target_id, {}).get("type", "unknown")
-
-                        if target_type == "image":
-                            if dist <= image_hamming_distance:
-                                item_min_image_hamming[target_id] = min(item_min_image_hamming[target_id], dist)
-                        else:
-                            if dist <= video_hamming_distance:
-                                item_min_video_hamming[target_id] = min(item_min_video_hamming[target_id], dist)
-
-        if audio_segments and self.audio_index.ntotal > 0:
+        # Match audio segments
+        if audio_segments:
+            match_counts = {}
+            min_distances = {}
+            
             for seg in audio_segments:
-                binary = HashingService.fingerprint_to_binary(seg["fingerprint"])
-                binary_array = np.array([binary], dtype=np.uint8)
-                lims, D, I = self.audio_index.range_search(binary_array, audio_hamming_distance + 1)
+                fingerprint = seg.get("fingerprint", [])
+                if fingerprint:
+                    vector = self._fingerprint_to_vector(fingerprint)
+                    
+                    results = self.client.query_points(
+                        collection_name=AUDIO_COLLECTION,
+                        query=vector,
+                        limit=10
+                    )
+                    
+                    for point in results.points:
+                        hit_item_id = point.payload.get("item_id")
+                        hamming = self._euclidean_to_hamming(point.score)
+                        
+                        if hamming <= audio_hamming_distance:
+                            match_counts[hit_item_id] = match_counts.get(hit_item_id, 0) + 1
+                            if hit_item_id not in min_distances or hamming < min_distances[hit_item_id]:
+                                min_distances[hit_item_id] = hamming
 
-                for j in range(lims[0], lims[1]):
-                    idx = I[j]
-                    dist = int(D[j])
-                    if idx < len(self.audio_metadata):
-                        meta = self.audio_metadata[idx]
-                        item_min_audio_hamming[meta["item_id"]] = min(item_min_audio_hamming[meta["item_id"]], dist)
+            for cand_id, count in match_counts.items():
+                match_pct = (1 - min_distances[cand_id] / 256) * 100
+                candidates[cand_id] = candidates.get(cand_id, {})
+                candidates[cand_id]["audio_match_percent"] = match_pct
+                candidates[cand_id]["audio_hamming_distance"] = min_distances[cand_id]
 
-        if transcript_segments and self.transcript_metadata:
-            transcript_sum = defaultdict(float)
-            transcript_count = defaultdict(int)
-            for seg in transcript_segments:
-                text = seg.get("text", "")
-                if text.strip():
-                    query_mh = self._create_minhash(text)
-                    for key in self.lsh.query(query_mh):
-                        if key in self.transcript_metadata:
-                            meta = self.transcript_metadata[key]
-                            sim = query_mh.jaccard(meta["minhash"])
-                            transcript_sum[meta["item_id"]] += sim
-                            transcript_count[meta["item_id"]] += 1
-            for item_id in transcript_sum:
-                if transcript_count[item_id] > 0:
-                    item_transcript_matches[item_id] = transcript_sum[item_id] / transcript_count[item_id]
+        # Match transcript
+        if transcript_segments:
+            combined_text = " ".join(s.get("text", "") for s in transcript_segments)
+            if combined_text.strip():
+                query_mh = MinHash(num_perm=128)
+                for word in combined_text.lower().split():
+                    query_mh.update(word.encode('utf-8'))
+                
+                matches = self.transcript_lsh.query(query_mh)
+                for cand_id in matches:
+                    if cand_id in self.transcript_minhashes:
+                        similarity = query_mh.jaccard(self.transcript_minhashes[cand_id])
+                        if similarity >= transcript_threshold:
+                            candidates[cand_id] = candidates.get(cand_id, {})
+                            candidates[cand_id]["transcript_match_percent"] = similarity * 100
 
-        all_ids = (
-            set(item_min_image_hamming.keys()) |
-            set(item_min_video_hamming.keys()) |
-            set(item_min_audio_hamming.keys()) |
-            set(item_transcript_matches.keys())
-        )
-
+        # Build results
         results = []
-        for item_id in all_ids:
-            img_pct = vid_pct = aud_pct = trans_pct = None
-            img_dist = vid_dist = aud_dist = None
-            has_img = has_vid = has_aud = has_trans = False
-
-            if item_id in item_min_image_hamming:
-                img_dist = item_min_image_hamming[item_id]
-                if img_dist <= image_hamming_distance:
-                    img_pct = (1.0 - img_dist / max(image_hamming_distance, 1)) * 100
-                    if img_pct >= image_threshold * 100:
-                        has_img = True
-
-            if item_id in item_min_video_hamming:
-                vid_dist = item_min_video_hamming[item_id]
-                if vid_dist <= video_hamming_distance:
-                    vid_pct = (1.0 - vid_dist / max(video_hamming_distance, 1)) * 100
-                    if vid_pct >= video_threshold * 100:
-                        has_vid = True
-
-            if item_id in item_min_audio_hamming:
-                aud_dist = item_min_audio_hamming[item_id]
-                if aud_dist <= audio_hamming_distance:
-                    aud_pct = (1.0 - aud_dist / max(audio_hamming_distance, 1)) * 100
-                    if aud_pct >= audio_threshold * 100:
-                        has_aud = True
-
-            if item_id in item_transcript_matches:
-                trans_pct = item_transcript_matches[item_id] * 100
-                if trans_pct >= transcript_threshold * 100:
-                    has_trans = True
-
-            if has_img or has_vid or has_aud or has_trans:
-                all_exact = True
-                if img_pct is not None and img_pct < 100:
-                    all_exact = False
-                if vid_pct is not None and vid_pct < 100:
-                    all_exact = False
-                if aud_pct is not None and aud_pct < 100:
-                    all_exact = False
-                if trans_pct is not None and trans_pct < 100:
-                    all_exact = False
-
-                results.append({
-                    "item_id": item_id,
-                    "status": "exact_match" if all_exact else "near_match",
-                    "image_match_percent": round(img_pct, 2) if img_pct else None,
-                    "video_match_percent": round(vid_pct, 2) if vid_pct else None,
-                    "audio_match_percent": round(aud_pct, 2) if aud_pct else None,
-                    "transcript_match_percent": round(trans_pct, 2) if trans_pct else None,
-                    "image_hamming_distance": img_dist,
-                    "video_hamming_distance": vid_dist,
-                    "audio_hamming_distance": aud_dist
-                })
-
-        results.sort(key=lambda x: (
-            x["status"] != "exact_match",
-            -(x["image_match_percent"] or 0),
-            -(x["video_match_percent"] or 0),
-            -(x["audio_match_percent"] or 0),
-            -(x["transcript_match_percent"] or 0)
-        ))
-
-        if not results:
-            return [{
-                "item_id": "",
+        for cand_id, data in candidates.items():
+            result = {
+                "item_id": cand_id,
                 "status": "no_match",
-                "image_match_percent": None,
-                "video_match_percent": None,
-                "audio_match_percent": None,
-                "transcript_match_percent": None,
-                "image_hamming_distance": None,
-                "video_hamming_distance": None,
-                "audio_hamming_distance": None
-            }]
+                "image_match_percent": data.get("image_match_percent"),
+                "video_match_percent": data.get("video_match_percent"),
+                "audio_match_percent": data.get("audio_match_percent"),
+                "transcript_match_percent": data.get("transcript_match_percent"),
+                "image_hamming_distance": data.get("image_hamming_distance"),
+                "video_hamming_distance": data.get("video_hamming_distance"),
+                "audio_hamming_distance": data.get("audio_hamming_distance"),
+            }
+            
+            has_match = any([
+                data.get("image_match_percent"),
+                data.get("video_match_percent"),
+                data.get("audio_match_percent"),
+                data.get("transcript_match_percent")
+            ])
+            
+            if has_match:
+                is_exact = (
+                    (data.get("image_hamming_distance") == 0) or
+                    (data.get("video_hamming_distance") == 0) or
+                    (data.get("audio_hamming_distance") == 0)
+                )
+                result["status"] = "exact_match" if is_exact else "near_match"
+            
+            results.append(result)
+
+        results.sort(key=lambda x: max(
+            x.get("image_match_percent") or 0,
+            x.get("video_match_percent") or 0,
+            x.get("audio_match_percent") or 0,
+            x.get("transcript_match_percent") or 0
+        ), reverse=True)
 
         return results
 
-    def delete(self, item_id: str) -> bool:
-        if item_id not in self.items:
-            return False
+    def delete_item(self, item_id: str, **kwargs) -> dict:
+        """Delete item from all indexes."""
+        for collection in [VIDEO_COLLECTION, AUDIO_COLLECTION, IMAGE_COLLECTION]:
+            self.client.delete(
+                collection_name=collection,
+                points_selector=Filter(
+                    must=[
+                        FieldCondition(
+                            key="item_id",
+                            match=MatchValue(value=item_id)
+                        )
+                    ]
+                )
+            )
 
-        del self.items[item_id]
-
-        new_video = [m for m in self.video_metadata if m["item_id"] != item_id]
-        new_audio = [m for m in self.audio_metadata if m["item_id"] != item_id]
-
-        keys_to_remove = [k for k, v in self.transcript_metadata.items() if v["item_id"] == item_id]
-        for key in keys_to_remove:
+        if item_id in self.transcript_minhashes:
             try:
-                self.lsh.remove(key)
+                self.transcript_lsh.remove(item_id)
             except:
                 pass
-            del self.transcript_metadata[key]
+            del self.transcript_minhashes[item_id]
+        if item_id in self.transcript_segments:
+            del self.transcript_segments[item_id]
 
-        self.video_index = faiss.IndexBinaryFlat(256)
-        self.video_metadata = new_video
+        return {"deleted": True, "item_id": item_id}
 
-        self.audio_index = faiss.IndexBinaryFlat(256)
-        self.audio_metadata = new_audio
+    def reset(self, **kwargs) -> dict:
+        """Reset all indexes."""
+        for collection in [VIDEO_COLLECTION, AUDIO_COLLECTION, IMAGE_COLLECTION]:
+            try:
+                self.client.delete_collection(collection_name=collection)
+            except:
+                pass
+        
+        self._init_collections()
+        
+        self.transcript_lsh = MinHashLSH(threshold=0.5, num_perm=128)
+        self.transcript_minhashes.clear()
+        self.transcript_segments.clear()
 
-        logger.info(f"Deleted {item_id[:12]}...")
-        return True
+        return {"reset": True}
 
-    def reset(self) -> int:
-        count = len(self.items)
-        self.video_index = faiss.IndexBinaryFlat(256)
-        self.audio_index = faiss.IndexBinaryFlat(256)
-        self.lsh = MinHashLSH(threshold=0.5, num_perm=128)
-        self.items = {}
-        self.video_metadata = []
-        self.audio_metadata = []
-        self.transcript_metadata = {}
-        logger.info(f"Reset, cleared {count} items")
-        return count
-
-    def stats(self) -> dict:
-        return {
-            "total_items": len(self.items),
-            "total_video_hashes": self.video_index.ntotal,
-            "total_audio_segments": self.audio_index.ntotal,
-            "total_transcript_segments": len(self.transcript_metadata)
+    def get_stats(self, **kwargs) -> dict:
+        """Get index statistics."""
+        stats = {
+            "total_items": 0,
+            "total_video_hashes": 0,
+            "total_audio_segments": 0,
+            "total_image_hashes": 0,
+            "total_transcript_segments": len(self.transcript_segments)
         }
+        
+        try:
+            video_info = self.client.get_collection(VIDEO_COLLECTION)
+            stats["total_video_hashes"] = video_info.points_count
+        except:
+            pass
+            
+        try:
+            audio_info = self.client.get_collection(AUDIO_COLLECTION)
+            stats["total_audio_segments"] = audio_info.points_count
+        except:
+            pass
+            
+        try:
+            image_info = self.client.get_collection(IMAGE_COLLECTION)
+            stats["total_image_hashes"] = image_info.points_count
+        except:
+            pass
+
+        stats["total_items"] = len(self.transcript_segments)
+
+        return stats

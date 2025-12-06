@@ -1,8 +1,8 @@
+# hashing/app/services/index_client.py
 import json
 import uuid
 import logging
 from redis import Redis
-
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -20,7 +20,6 @@ class IndexClient:
     def _send_request(self, action: str, **kwargs) -> dict:
         request_id = str(uuid.uuid4())
         reply_queue = f"{self.result_prefix}{request_id}"
-
         request = {"request_id": request_id, "action": action, **kwargs}
 
         # Send request
@@ -28,7 +27,6 @@ class IndexClient:
 
         # Wait for response
         result = self.redis.blpop(reply_queue, timeout=self.timeout)
-
         if result is None:
             raise TimeoutError(f"Index service timeout after {self.timeout}s")
 
@@ -52,15 +50,25 @@ class IndexClient:
         transcript_segments: list | None = None,
         transcript_text: str | None = None
     ) -> dict:
-        response = self._send_request(
-            action="add",
-            item_id=item_id,
-            item_type=item_type,
-            video_hashes=video_hashes,
-            audio_segments=audio_segments,
-            transcript_segments=transcript_segments,
-            transcript_text=transcript_text
-        )
+        kwargs = {
+            "item_id": item_id,
+            "item_type": item_type,
+        }
+
+        # Only include relevant fields per media type
+        if item_type == "image":
+            kwargs["video_hashes"] = video_hashes
+        elif item_type == "video":
+            kwargs["video_hashes"] = video_hashes
+            kwargs["audio_segments"] = audio_segments
+            kwargs["transcript_segments"] = transcript_segments
+            kwargs["transcript_text"] = transcript_text
+        elif item_type == "audio":
+            kwargs["audio_segments"] = audio_segments
+            kwargs["transcript_segments"] = transcript_segments
+            kwargs["transcript_text"] = transcript_text
+
+        response = self._send_request(action="add", **kwargs)
         return response["result"]
 
     def match(
@@ -79,10 +87,26 @@ class IndexClient:
     ) -> list[dict]:
         kwargs = {
             "query_type": query_type,
-            "video_hashes": video_hashes,
-            "audio_segments": audio_segments,
-            "transcript_segments": transcript_segments
         }
+
+        # Only include relevant fields per media type
+        if query_type == "image":
+            kwargs["video_hashes"] = video_hashes
+        elif query_type == "video":
+            kwargs["video_hashes"] = video_hashes
+            kwargs["audio_segments"] = audio_segments
+            kwargs["transcript_segments"] = transcript_segments
+        elif query_type == "audio":
+            kwargs["audio_segments"] = audio_segments
+            kwargs["transcript_segments"] = transcript_segments
+
+        # Add thresholds if provided
+        if image_hamming_distance is not None:
+            kwargs["image_hamming_distance"] = image_hamming_distance
+        if video_hamming_distance is not None:
+            kwargs["video_hamming_distance"] = video_hamming_distance
+        if audio_hamming_distance is not None:
+            kwargs["audio_hamming_distance"] = audio_hamming_distance
         if image_threshold is not None:
             kwargs["image_threshold"] = image_threshold
         if video_threshold is not None:
@@ -91,12 +115,6 @@ class IndexClient:
             kwargs["audio_threshold"] = audio_threshold
         if transcript_threshold is not None:
             kwargs["transcript_threshold"] = transcript_threshold
-        if image_hamming_distance is not None:
-            kwargs["image_hamming_distance"] = image_hamming_distance
-        if video_hamming_distance is not None:
-            kwargs["video_hamming_distance"] = video_hamming_distance
-        if audio_hamming_distance is not None:
-            kwargs["audio_hamming_distance"] = audio_hamming_distance
 
         response = self._send_request(action="match", **kwargs)
         return response["results"]
