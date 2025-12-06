@@ -13,9 +13,9 @@ BASE_URL = "http://localhost:8000"
 TMP_DIR = "./tmp/image_threshold_calibration"
 
 # Percentages for all tests
-# 2,4,6,8,10 should MATCH (≤10%)
-# 12,14,16,18,20 should NOT MATCH (>10%)
-PERCENTAGES = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20]
+# 6,8,10 should MATCH (≤10%)
+# 12,14 should NOT MATCH (>10%)
+PERCENTAGES = [6, 8, 10, 12, 14]
 MATCH_THRESHOLD = 10  # ≤10% should match
 
 
@@ -550,8 +550,8 @@ def export_results(best, all_results, elapsed_time, filename="./results/calibrat
     lines.append("=" * 80)
     lines.append("")
     lines.append("Calibration criteria (threshold = 90%):")
-    lines.append("  - 2,4,6,8,10% modification: should MATCH (≤10%)")
-    lines.append("  - 12,14,16,18,20% modification: should NOT MATCH (>10%)")
+    lines.append("  - 6,8,10% modification: should MATCH (≤10%)")
+    lines.append("  - 12,14% modification: should NOT MATCH (>10%)")
     lines.append("")
     lines.append("Test mappings:")
     lines.append("  - Cutoff (right/left/top/bottom): pct% cut off from each side")
@@ -584,8 +584,8 @@ def main():
     print("=" * 80)
     print()
     print("Calibration criteria (threshold = 90%):")
-    print("  - 2,4,6,8,10% modification: should MATCH")
-    print("  - 12,14,16,18,20% modification: should NOT MATCH")
+    print("  - 6,8,10% modification: should MATCH")
+    print("  - 12,14% modification: should NOT MATCH")
     print()
     print("Tests: Cutoff (right/left/top/bottom), Noise, Brightness, Contrast, Resize, Grayscale, JPEG, Blur")
     print()

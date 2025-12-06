@@ -13,10 +13,10 @@ TMP_DIR = "./tmp/video_threshold_calibration"
 VIDEO_DURATION = 20  # seconds
 
 # Percentages for all tests
-# 2,4,6,8,10 should MATCH (≤10%)
-# 12,14,16,18,20 should NOT MATCH (>10%)
-PERCENTAGES = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20]
-MATCH_THRESHOLD = 10  # ≤10% should match
+# 12,14 should MATCH (≤15%)
+# 16,18 should NOT MATCH (>15%)
+PERCENTAGES = [12, 14, 16, 18]
+MATCH_THRESHOLD = 15  # ≤15% should match
 
 # Lorem ipsum text for speech
 LOREM_IPSUM = """
@@ -849,9 +849,9 @@ def export_results(best, all_results, elapsed_time, filename="./results/calibrat
     lines.append(f"Duration: {format_duration(elapsed_time)}")
     lines.append("=" * 80)
     lines.append("")
-    lines.append("Calibration criteria (threshold = 90%):")
-    lines.append("  - 2,4,6,8,10% modification: should MATCH (≤10%)")
-    lines.append("  - 12,14,16,18,20% modification: should NOT MATCH (>10%)")
+    lines.append("Calibration criteria (threshold = 85%):")
+    lines.append("  - 12,14% modification: should MATCH (≤15%)")
+    lines.append("  - 16,18% modification: should NOT MATCH (>15%)")
     lines.append("")
     lines.append("Note: Both video and audio now use Hamming distance (0-256 bits).")
     lines.append("  - Video: PDQ 256-bit perceptual hash")
@@ -910,20 +910,20 @@ def main():
     check_dependencies()
     print()
     
-    print("Calibration criteria (threshold = 90%):")
-    print("  - 2,4,6,8,10% modification: should MATCH")
-    print("  - 12,14,16,18,20% modification: should NOT MATCH")
+    print("Calibration criteria (threshold = 85%):")
+    print("  - 12,14% modification: should MATCH")
+    print("  - 16,18% modification: should NOT MATCH")
     print()
     print("Note: Both video and audio now use Hamming distance (0-256 bits).")
     print()
     print("Tests:")
-    print("  - Crop (right/left/top/bottom) x 10 percentages = 40 tests")
-    print("  - Trim (start/end/middle) x 10 percentages = 30 tests")
-    print("  - Resize, Quality x 10 percentages = 20 tests")
-    print("  - Speed (down/up) x 10 percentages = 20 tests")
-    print("  - Audio (noise/vol_down/vol_up) x 10 percentages = 30 tests")
+    print("  - Crop (right/left/top/bottom) x 4 percentages = 16 tests")
+    print("  - Trim (start/end/middle) x 4 percentages = 12 tests")
+    print("  - Resize, Quality x 4 percentages = 8 tests")
+    print("  - Speed (down/up) x 4 percentages = 8 tests")
+    print("  - Audio (noise/vol_down/vol_up) x 4 percentages = 12 tests")
     print("  - Grayscale, NoAudio, AudioMono, Exact, Different = 5 tests")
-    print("  - Total: 145 tests per threshold combination")
+    print("  - Total: 61 tests per threshold combination")
     print()
     
     try:

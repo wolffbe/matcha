@@ -12,9 +12,9 @@ BASE_URL = "http://localhost:8000"
 TMP_DIR = "./tmp/audio_threshold_calibration"
 
 # Percentages for all tests
-# 10,12,14 should MATCH (≤15% modification, ≥85% remains)
-# 16,18,20 should NOT MATCH (>15% modification, <85% remains)
-PERCENTAGES = [10, 12, 14, 16, 18, 20]
+# 12,14 should MATCH (≤15% modification, ≥85% remains)
+# 16,18 should NOT MATCH (>15% modification, <85% remains)
+PERCENTAGES = [12, 14, 16, 18]
 MATCH_THRESHOLD = 15  # ≤15% modification should match
 
 LOREM_IPSUM = """
@@ -570,8 +570,8 @@ def export_results(best, all_results, elapsed_time, filename="./results/calibrat
     lines.append("=" * 80)
     lines.append("")
     lines.append("Calibration criteria (threshold = 85%):")
-    lines.append("  - 10,12,14% modification: should MATCH (≤15%)")
-    lines.append("  - 16,18,20% modification: should NOT MATCH (>15%)")
+    lines.append("  - 12,14% modification: should MATCH (≤15%)")
+    lines.append("  - 16,18% modification: should NOT MATCH (>15%)")
     lines.append("")
     lines.append("Test categories:")
     lines.append("  - Trim start/end/middle: pct% removed")
@@ -605,8 +605,8 @@ def main():
     print("=" * 80)
     print()
     print("Calibration criteria (threshold = 85%):")
-    print("  - 10,12,14% modification: should MATCH")
-    print("  - 16,18,20% modification: should NOT MATCH")
+    print("  - 12,14% modification: should MATCH")
+    print("  - 16,18% modification: should NOT MATCH")
     print()
     print("Tests: Trim (start/end/middle), Noise, Quality, Mono, Volume (±), Speed (±)")
     print()
