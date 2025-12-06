@@ -10,7 +10,7 @@ from PIL import Image
 logger = logging.getLogger(__name__)
 
 
-class MediaService:
+class HashingService:
     
     # 8 int32s = 256 bits = 32 bytes (matches PDQ hash size)
     FINGERPRINT_INTS = 8
@@ -82,7 +82,7 @@ class MediaService:
     def compute_video_hashes(file_path: str, is_image: bool = False) -> list[dict]:
         if is_image:
             try:
-                hex_str, quality = MediaService.hash_image(file_path)
+                hex_str, quality = HashingService.hash_image(file_path)
                 logger.info(f"Computed image hash (quality={quality})")
                 return [{
                     "frame_number": 0,
@@ -117,7 +117,7 @@ class MediaService:
             for i, frame_file in enumerate(frame_files):
                 frame_path = os.path.join(tmp_dir, frame_file)
                 try:
-                    hex_str, quality = MediaService.hash_image(frame_path)
+                    hex_str, quality = HashingService.hash_image(frame_path)
                     hashes.append({
                         "frame_number": i,
                         "quality": quality,

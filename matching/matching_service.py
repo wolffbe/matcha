@@ -6,12 +6,12 @@ import re
 from collections import defaultdict
 from datasketch import MinHash, MinHashLSH
 
-from services.media import MediaService
+from hashing.hashing_service import HashingService
 
 logger = logging.getLogger(__name__)
 
 
-class IndexService:
+class MatchingService:
     
     def __init__(self):
         # Both video and audio now use 256-bit binary hashes with Hamming distance
@@ -25,7 +25,7 @@ class IndexService:
         self.audio_metadata = []
         self.transcript_metadata = {}
         
-        logger.info("IndexService initialized (video=Hamming/256bit, audio=Hamming/256bit)")
+        logger.info("MatchingService initialized (video=Hamming/256bit, audio=Hamming/256bit)")
     
     def _text_to_shingles(self, text: str, k: int = 3) -> set:
         text = text.lower()
@@ -62,7 +62,7 @@ class IndexService:
         # Index video hashes
         if video_hashes:
             for vh in video_hashes:
-                hash_bytes = MediaService.hex_to_bytes(vh["hex"])
+                hash_bytes = HashingService.hex_to_bytes(vh["hex"])
                 hash_array = np.array([hash_bytes], dtype=np.uint8)
                 self.video_index.add(hash_array)
                 self.video_metadata.append({
@@ -75,7 +75,7 @@ class IndexService:
         # Index audio segments (now using binary Hamming)
         if audio_segments:
             for seg in audio_segments:
-                binary = MediaService.fingerprint_to_binary(seg["fingerprint"])
+                binary = HashingService.fingerprint_to_binary(seg["fingerprint"])
                 binary_array = np.array([binary], dtype=np.uint8)
                 self.audio_index.add(binary_array)
                 self.audio_metadata.append({
@@ -150,7 +150,7 @@ class IndexService:
             search_hamming = max(image_hamming_distance, video_hamming_distance)
             
             for i, vh in enumerate(video_hashes):
-                hash_bytes = MediaService.hex_to_bytes(vh["hex"])
+                hash_bytes = HashingService.hex_to_bytes(vh["hex"])
                 hash_array = np.array([hash_bytes], dtype=np.uint8)
                 
                 lims, D, I = self.video_index.range_search(hash_array, search_hamming + 1)
@@ -179,7 +179,7 @@ class IndexService:
         if audio_segments and self.audio_index.ntotal > 0:
             num_query_audio = len(audio_segments)
             for i, seg in enumerate(audio_segments):
-                binary = MediaService.fingerprint_to_binary(seg["fingerprint"])
+                binary = HashingService.fingerprint_to_binary(seg["fingerprint"])
                 binary_array = np.array([binary], dtype=np.uint8)
                 
                 lims, D, I = self.audio_index.range_search(binary_array, audio_hamming_distance + 1)

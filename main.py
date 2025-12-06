@@ -6,9 +6,9 @@ import logging
 
 from config import settings
 from models import HashResponse, MatchResult, DeleteResponse, ResetResponse
-from services.media import MediaService
-from services.transcript import TranscriptService
-from services.index import IndexService
+from hashing.hashing_service import HashingService
+from hashing.transcript_service import TranscriptService
+from matching.matching_service import MatchingService
 
 logging.basicConfig(
     level=logging.INFO,
@@ -16,7 +16,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-index = IndexService()
+matching_index = MatchingService()
 
 
 def compute_file_hash(file_path: str) -> str:
@@ -60,15 +60,15 @@ async def hash_media(
         
         item_id = compute_file_hash(tmp_path)
         
-        if item_id in index.items:
+        if item_id in matching_index.items:
             logger.info(f"Item {item_id[:12]}... already indexed")
             return HashResponse(
                 item_id=item_id,
-                type=index.items[item_id]["type"],
-                num_video_hashes=index.items[item_id].get("num_video_hashes", 0),
-                num_audio_segments=index.items[item_id].get("num_audio_segments", 0),
-                num_transcript_segments=index.items[item_id].get("num_transcript_segments", 0),
-                transcript_text=index.items[item_id].get("transcript_text")
+                type=matching_index.items[item_id]["type"],
+                num_video_hashes=matching_index.items[item_id].get("num_video_hashes", 0),
+                num_audio_segments=matching_index.items[item_id].get("num_audio_segments", 0),
+                num_transcript_segments=matching_index.items[item_id].get("num_transcript_segments", 0),
+                transcript_text=matching_index.items[item_id].get("transcript_text")
             )
         
         media_type = MediaService.detect_type(tmp_path)
@@ -113,7 +113,7 @@ async def hash_media(
             if not video_hashes:
                 raise HTTPException(status_code=400, detail="Could not extract image hash")
         
-        index.add_item(
+        matching_index.add_item(
             item_id=item_id,
             item_type=media_type,
             video_hashes=video_hashes or None,
@@ -210,7 +210,7 @@ async def match_media(
         a_hamming = audio_hamming_distance if audio_hamming_distance is not None else settings.audio_hamming_distance
         logger.info(f"Matching {filename} with image_hamming={i_hamming}, video_hamming={v_hamming}, audio_hamming={a_hamming}")
         
-        results = index.match(
+        results = matching_index.match(
             query_type=media_type,
             video_hashes=video_hashes or None,
             audio_segments=audio_segments or None,
@@ -241,7 +241,7 @@ async def match_media(
 @app.delete("/delete/{item_id}", response_model=DeleteResponse)
 async def delete_item(item_id: str):
     logger.info(f"Delete request: {item_id[:12]}...")
-    deleted = index.delete(item_id)
+    deleted = matching_index.delete(item_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Item not found")
     logger.info(f"Deleted: {item_id[:12]}...")
@@ -251,7 +251,7 @@ async def delete_item(item_id: str):
 @app.post("/reset", response_model=ResetResponse)
 async def reset_index():
     logger.info("Reset request")
-    count = index.reset()
+    count = matching_index.reset()
     logger.info(f"Reset complete: {count} items cleared")
     return ResetResponse(status="cleared", items_cleared=count)
 
@@ -259,7 +259,7 @@ async def reset_index():
 @app.get("/stats")
 async def get_stats():
     logger.info("Stats request")
-    return index.stats()
+    return matching_index.stats()
 
 
 @app.get("/health")
