@@ -1,3 +1,4 @@
+# app/services/hashing.py
 import subprocess
 import uuid
 import os
@@ -11,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 
 class HashingService:
-    FINGERPRINT_INTS = 8
 
     @staticmethod
     def detect_type(file_path: str) -> str:
