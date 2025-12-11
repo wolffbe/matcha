@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     transcript_threshold: float = 0.85
     
     # Per-type offsets (0-0.5)
-    image_offset: float = 0.03
+    image_offset: float = 0.0125
     video_offset: float = 0.03
     audio_offset: float = 0.03
     transcript_offset: float = 0.03

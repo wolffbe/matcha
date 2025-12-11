@@ -185,8 +185,11 @@ class MatchingService:
         media_type = item_type or "unknown"
         candidates = {}
 
-        # Hamming thresholds
-        hamming = {"image": 20, "video": 28, "audio": 80}
+        # Hamming thresholds for candidate retrieval
+        # For images: dynamically calculate from threshold + offset
+        # pct = (256 - ham) / 256 * 100 → ham = 256 * (1 - pct/100)
+        img_ham_thresh = int(256 * (1 - (img_thresh - img_off) / 100)) + 1  # +1 for rounding safety
+        hamming = {"image": img_ham_thresh, "video": 28, "audio": 80}
 
         # Match video/image hashes
         if video_hashes:
@@ -194,27 +197,54 @@ class MatchingService:
             key = "image_match_percent" if media_type == "image" else "video_match_percent"
             ham_thresh = hamming.get(media_type, 28)
             
-            matched = {}
-            total = 0
-            for idx, h in enumerate(video_hashes):
-                hex_val = h.get("hex", h) if isinstance(h, dict) else h
-                if not hex_val or len(str(hex_val)) != 64:
-                    continue
-                total += 1
-                results = self.qdrant.query_points(
-                    collection_name=collection,
-                    query=self._hash_to_vector(str(hex_val)),
-                    limit=10
-                )
-                for pt in results.points:
-                    hit_id = pt.payload.get("item_id")
-                    if self._euclidean_to_hamming(pt.score) <= ham_thresh:
-                        matched.setdefault(hit_id, set()).add(idx)
+            if media_type == "image":
+                # For images: calculate percentage from hamming distance
+                # PDQ hash is 256 bits, so similarity = (256 - hamming) / 256 * 100
+                best_matches = {}  # item_id -> best (lowest) hamming distance
+                
+                for h in video_hashes:
+                    hex_val = h.get("hex", h) if isinstance(h, dict) else h
+                    if not hex_val or len(str(hex_val)) != 64:
+                        continue
+                    results = self.qdrant.query_points(
+                        collection_name=collection,
+                        query=self._hash_to_vector(str(hex_val)),
+                        limit=10
+                    )
+                    for pt in results.points:
+                        hit_id = pt.payload.get("item_id")
+                        ham_dist = self._euclidean_to_hamming(pt.score)
+                        if ham_dist <= ham_thresh:
+                            if hit_id not in best_matches or ham_dist < best_matches[hit_id]:
+                                best_matches[hit_id] = ham_dist
+                
+                for hit_id, ham_dist in best_matches.items():
+                    # Convert hamming distance to percentage (256 bits total)
+                    pct = (256 - ham_dist) / 256 * 100
+                    candidates.setdefault(hit_id, {})[key] = pct
+            else:
+                # For videos: count matching frames
+                matched = {}
+                total = 0
+                for idx, h in enumerate(video_hashes):
+                    hex_val = h.get("hex", h) if isinstance(h, dict) else h
+                    if not hex_val or len(str(hex_val)) != 64:
+                        continue
+                    total += 1
+                    results = self.qdrant.query_points(
+                        collection_name=collection,
+                        query=self._hash_to_vector(str(hex_val)),
+                        limit=10
+                    )
+                    for pt in results.points:
+                        hit_id = pt.payload.get("item_id")
+                        if self._euclidean_to_hamming(pt.score) <= ham_thresh:
+                            matched.setdefault(hit_id, set()).add(idx)
 
-            for hit_id, segs in matched.items():
-                indexed = self._count_segments(collection, hit_id)
-                pct = len(segs) / max(total, indexed) * 100 if max(total, indexed) > 0 else 0
-                candidates.setdefault(hit_id, {})[key] = pct
+                for hit_id, segs in matched.items():
+                    indexed = self._count_segments(collection, hit_id)
+                    pct = len(segs) / max(total, indexed) * 100 if max(total, indexed) > 0 else 0
+                    candidates.setdefault(hit_id, {})[key] = pct
 
         # Match audio with multi-offset alignment (handles middle cuts)
         if audio_segments:

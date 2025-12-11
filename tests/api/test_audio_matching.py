@@ -1,5 +1,4 @@
 # tests/test_audio_matching.py
-"""Audio fingerprint matching tests - deterministic and reliable."""
 import subprocess
 import os
 import shutil
