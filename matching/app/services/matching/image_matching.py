@@ -38,14 +38,10 @@ class ImageMatcher:
         
         return len(points)
 
-    def match_hash(self, video_hashes: list, hamming_threshold: int) -> Dict[str, float]:
+    def match_hash(self, video_hashes: list, hamming_threshold: int) -> Dict[str, dict]:
         """
         Match image hash against indexed items.
-        Returns dict of item_id -> match percentage (based on hamming distance).
-        
-        Args:
-            video_hashes: List of image hashes to match
-            hamming_threshold: Maximum hamming distance to consider a match
+        Returns dict of item_id -> {"score": percentage, "is_exact": bool}
         """
         if not video_hashes:
             return {}
@@ -75,7 +71,10 @@ class ImageMatcher:
         results = {}
         for hit_id, ham_dist in best_matches.items():
             pct = (256 - ham_dist) / 256 * 100
-            results[hit_id] = pct
+            results[hit_id] = {
+                "score": pct,
+                "is_exact": ham_dist == 0
+            }
         
         return results
 

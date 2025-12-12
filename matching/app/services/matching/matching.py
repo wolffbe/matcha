@@ -56,6 +56,7 @@ class MatchingService:
                    audio_threshold: float = None, transcript_threshold: float = None,
                    image_offset: float = None, video_offset: float = None,
                    audio_offset: float = None, transcript_offset: float = None,
+                   video_max_hamming: int = None,
                    **kwargs) -> list[dict]:
         
         img_thresh = image_threshold if image_threshold is not None else settings.image_threshold
@@ -74,11 +75,13 @@ class MatchingService:
         if video_hashes:
             if media_type == "image":
                 img_ham_thresh = int(256 * (1 - (img_thresh - img_off))) + 1
-                for item_id, pct in self.image_matcher.match_hash(video_hashes, img_ham_thresh).items():
-                    candidates.setdefault(item_id, {})["image_match_percent"] = pct
+                for item_id, match_data in self.image_matcher.match_hash(video_hashes, img_ham_thresh).items():
+                    candidates.setdefault(item_id, {})["image_match_percent"] = match_data["score"]
+                    candidates[item_id]["image_is_exact"] = match_data["is_exact"]
             else:
-                for item_id, pct in self.video_matcher.match_hashes(video_hashes, vid_thresh, vid_off).items():
-                    candidates.setdefault(item_id, {})["video_match_percent"] = pct
+                for item_id, match_data in self.video_matcher.match_hashes(video_hashes, vid_thresh, vid_off, video_max_hamming).items():
+                    candidates.setdefault(item_id, {})["video_match_percent"] = match_data["score"]
+                    candidates[item_id]["video_is_exact"] = match_data["is_exact"]
         
         if audio_segments:
             for item_id, pct in self.audio_matcher.match_segments(audio_segments).items():
@@ -123,11 +126,12 @@ class MatchingService:
             if not any_match:
                 continue
             
-            # exact_match only if score == 100%, otherwise near_match
+            # exact_match based on is_exact flag (hamming=0 for image/video)
             if media_type == "image":
-                status = "exact_match" if image_pct == 100.0 else "near_match"
+                image_exact = data.get("image_is_exact", False)
+                status = "exact_match" if image_exact else "near_match"
             elif media_type == "video":
-                video_exact = video_pct == 100.0
+                video_exact = data.get("video_is_exact", False)
                 audio_exact = audio_pct == 100.0
                 transcript_exact = transcript_pct == 100.0
                 status = "exact_match" if video_exact or audio_exact or transcript_exact else "near_match"

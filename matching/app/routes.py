@@ -28,6 +28,21 @@ def compute_file_hash(file_path: str) -> str:
     return sha256.hexdigest()
 
 
+def validate_threshold_offset(threshold: float, offset: float, name: str):
+    """Validate that threshold - offset stays within 0-1 range."""
+    effective = threshold - offset
+    if effective < 0.0:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"{name} effective threshold ({threshold} - {offset} = {effective}) cannot be negative"
+        )
+    if effective > 1.0:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"{name} effective threshold ({threshold} - {offset} = {effective}) cannot exceed 1.0"
+        )
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok", **matching_service.get_stats()}
@@ -59,9 +74,10 @@ async def hash_media(
 
         if media_type == "video":
             video_hashes = hashing_service.compute_video_hashes(tmp_path)
-            audio_segments = hashing_service.compute_audio_fingerprints(tmp_path)
-            if not skip_transcript:
-                transcript_text = transcript_service.transcribe(tmp_path, language)
+            if hashing_service.has_audio_stream(tmp_path):
+                audio_segments = hashing_service.compute_audio_fingerprints(tmp_path)
+                if not skip_transcript:
+                    transcript_text = transcript_service.transcribe(tmp_path, language)
         elif media_type == "audio":
             audio_segments = hashing_service.compute_audio_fingerprints(tmp_path)
             if not skip_transcript:
@@ -105,11 +121,13 @@ async def match_media(
     video_threshold: float = Query(None, ge=0.0, le=1.0, description="Video match threshold (0-1)"),
     audio_threshold: float = Query(None, ge=0.0, le=1.0, description="Audio match threshold (0-1)"),
     transcript_threshold: float = Query(None, ge=0.0, le=1.0, description="Transcript match threshold (0-1)"),
-    # Per-type offsets
-    image_offset: float = Query(None, ge=0.0, le=0.5, description="Image offset for near_match (0-0.5)"),
-    video_offset: float = Query(None, ge=0.0, le=0.5, description="Video offset for near_match (0-0.5)"),
-    audio_offset: float = Query(None, ge=0.0, le=0.5, description="Audio offset for near_match (0-0.5)"),
-    transcript_offset: float = Query(None, ge=0.0, le=0.5, description="Transcript offset for near_match (0-0.5)")
+    # Per-type offsets (can be negative)
+    image_offset: float = Query(None, ge=-1.0, le=1.0, description="Image offset for near_match (-1 to 1)"),
+    video_offset: float = Query(None, ge=-1.0, le=1.0, description="Video offset for near_match (-1 to 1)"),
+    audio_offset: float = Query(None, ge=-1.0, le=1.0, description="Audio offset for near_match (-1 to 1)"),
+    transcript_offset: float = Query(None, ge=-1.0, le=1.0, description="Transcript offset for near_match (-1 to 1)"),
+    # Video frame hamming distance (256-bit VPDQ/PDQ hashes)
+    video_max_hamming: int = Query(None, ge=0, le=256, description="Direct hamming threshold for 256-bit video hash (0-256)")
 ):
     filename = file.filename or "unknown"
     tmp_path = f"/tmp/{uuid.uuid4()}_{filename}"
@@ -123,15 +141,36 @@ async def match_media(
         if media_type == "unknown":
             raise HTTPException(status_code=400, detail="Unknown media type")
 
+        # Use config defaults and validate effective thresholds
+        img_thresh = image_threshold if image_threshold is not None else settings.image_threshold
+        img_off = image_offset if image_offset is not None else settings.image_offset
+        validate_threshold_offset(img_thresh, img_off, "image")
+        
+        vid_thresh = video_threshold if video_threshold is not None else settings.video_threshold
+        vid_off = video_offset if video_offset is not None else settings.video_offset
+        validate_threshold_offset(vid_thresh, vid_off, "video")
+        
+        aud_thresh = audio_threshold if audio_threshold is not None else settings.audio_threshold
+        aud_off = audio_offset if audio_offset is not None else settings.audio_offset
+        validate_threshold_offset(aud_thresh, aud_off, "audio")
+        
+        trans_thresh = transcript_threshold if transcript_threshold is not None else settings.transcript_threshold
+        trans_off = transcript_offset if transcript_offset is not None else settings.transcript_offset
+        validate_threshold_offset(trans_thresh, trans_off, "transcript")
+        
+        # Apply config default for video_max_hamming
+        vid_max_ham = video_max_hamming if video_max_hamming is not None else settings.video_max_hamming
+
         video_hashes = []
         audio_segments = []
         transcript_text = None
 
         if media_type == "video":
             video_hashes = hashing_service.compute_video_hashes(tmp_path)
-            audio_segments = hashing_service.compute_audio_fingerprints(tmp_path)
-            if not skip_transcript:
-                transcript_text = transcript_service.transcribe(tmp_path, language)
+            if hashing_service.has_audio_stream(tmp_path):
+                audio_segments = hashing_service.compute_audio_fingerprints(tmp_path)
+                if not skip_transcript:
+                    transcript_text = transcript_service.transcribe(tmp_path, language)
         elif media_type == "audio":
             audio_segments = hashing_service.compute_audio_fingerprints(tmp_path)
             if not skip_transcript:
@@ -144,14 +183,15 @@ async def match_media(
             video_hashes=video_hashes or None,
             audio_segments=audio_segments or None,
             transcript_text=transcript_text,
-            image_threshold=image_threshold,
-            video_threshold=video_threshold,
-            audio_threshold=audio_threshold,
-            transcript_threshold=transcript_threshold,
-            image_offset=image_offset,
-            video_offset=video_offset,
-            audio_offset=audio_offset,
-            transcript_offset=transcript_offset
+            image_threshold=img_thresh,
+            video_threshold=vid_thresh,
+            audio_threshold=aud_thresh,
+            transcript_threshold=trans_thresh,
+            image_offset=img_off,
+            video_offset=vid_off,
+            audio_offset=aud_off,
+            transcript_offset=trans_off,
+            video_max_hamming=vid_max_ham
         )
 
         return [MatchResult(**r) for r in results]

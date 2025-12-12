@@ -3,7 +3,7 @@ import uuid
 import logging
 from typing import Dict, List
 from qdrant_client import QdrantClient
-from qdrant_client.models import PointStruct, Filter, FieldCondition, MatchValue
+from qdrant_client.models import PointStruct, Filter, FieldCondition, MatchValue, QueryRequest
 
 from app.services.matching.matching_base import (
     AUDIO_COLLECTION,
@@ -47,37 +47,57 @@ class AudioMatcher:
 
     def match_segments(self, audio_segments: list) -> Dict[str, float]:
         """
-        Match audio segments against indexed items.
+        Match audio segments against indexed items using batch search.
         Returns dict of item_id -> match percentage.
         Uses multi-offset alignment to handle middle cuts.
         """
         if not audio_segments:
             return {}
         
-        # For each indexed item, collect (query_idx, indexed_idx) pairs
-        item_matches: Dict[str, List[tuple]] = {}
-        
+        # Parse query segments
+        query_vectors: List[tuple] = []  # (query_idx, vector)
         for query_idx, seg in enumerate(audio_segments):
             fp = seg.get("fingerprint", [])
-            if not fp:
-                continue
-            
-            results = self.qdrant.query_points(
-                collection_name=AUDIO_COLLECTION,
-                query=fingerprint_to_vector(fp),
-                limit=10
+            if fp:
+                query_vectors.append((query_idx, fingerprint_to_vector(fp)))
+        
+        query_count = len(query_vectors)
+        if query_count == 0:
+            return {}
+        
+        # Batch search all segments at once
+        requests = [
+            QueryRequest(
+                query=vec,
+                limit=10,
+                with_payload=True
             )
+            for query_idx, vec in query_vectors
+        ]
+        
+        try:
+            batch_results = self.qdrant.query_batch_points(
+                collection_name=AUDIO_COLLECTION,
+                requests=requests
+            )
+        except Exception as e:
+            logger.error(f"Batch search failed: {e}")
+            return {}
+        
+        # Collect matches: item_id -> [(query_idx, indexed_idx), ...]
+        item_matches: Dict[str, List[tuple]] = {}
+        
+        for i, result in enumerate(batch_results):
+            query_idx = query_vectors[i][0]
+            points = result.points if hasattr(result, 'points') else result
             
-            for pt in results.points:
+            for pt in points:
                 if euclidean_to_hamming(pt.score) <= AUDIO_HAMMING_THRESHOLD:
                     hit_id = pt.payload.get("item_id")
                     indexed_idx = pt.payload.get("segment_index", 0)
                     item_matches.setdefault(hit_id, []).append((query_idx, indexed_idx))
         
-        query_count = len([s for s in audio_segments if s.get("fingerprint")])
-        if query_count == 0:
-            return {}
-        
+        # Calculate scores
         results = {}
         for hit_id, matches in item_matches.items():
             indexed_count = count_segments(self.qdrant, AUDIO_COLLECTION, hit_id)
@@ -112,6 +132,7 @@ class AudioMatcher:
             
             # Score: matched segments / larger of (query, indexed)
             pct = total_matched / max(query_count, indexed_count) * 100 if max(query_count, indexed_count) > 0 else 0
+            
             results[hit_id] = pct
         
         return results

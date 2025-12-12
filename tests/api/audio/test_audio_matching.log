@@ -1,0 +1,61 @@
+============================= test session starts ==============================
+platform linux -- Python 3.10.12, pytest-9.0.2, pluggy-1.6.0 -- /usr/bin/python3
+cachedir: .pytest_cache
+rootdir: /home/bjpw/workspace/matcha
+plugins: anyio-4.9.0, langsmith-0.4.4
+collecting ... collected 26 items
+
+tests/api/audio/test_audio_matching.py::TestExactMatch::test_exact_match Exact match: audio=100.0%, transcript=98.8%, status=exact_match
+PASSED
+tests/api/audio/test_audio_matching.py::TestNoMatch::test_different_audio_no_match Different audio: audio=56.8%, transcript=54.3%, status=no_match
+PASSED
+tests/api/audio/test_audio_matching.py::TestTrimStart::test_trim_start_13_percent Trim START 13%: audio=86.5%, transcript=78.1%, status=near_match
+PASSED
+tests/api/audio/test_audio_matching.py::TestTrimStart::test_trim_start_14_percent Trim START 14%: audio=83.8%, transcript=76.2%, status=near_match
+PASSED
+tests/api/audio/test_audio_matching.py::TestTrimStart::test_trim_start_15_percent Trim START 15%: audio=83.8%, transcript=78.1%, status=near_match
+PASSED
+tests/api/audio/test_audio_matching.py::TestTrimStart::test_trim_start_16_percent Trim START 16%: audio=81.1%, transcript=78.5%, status=no_match
+PASSED
+tests/api/audio/test_audio_matching.py::TestTrimStart::test_trim_start_17_percent Trim START 17%: audio=81.1%, transcript=75.0%, status=no_match
+PASSED
+tests/api/audio/test_audio_matching.py::TestTrimStart::test_trim_start_18_percent Trim START 18%: audio=78.4%, transcript=80.1%, status=no_match
+PASSED
+tests/api/audio/test_audio_matching.py::TestTrimStart::test_trim_start_19_percent Trim START 19%: audio=78.4%, transcript=79.3%, status=no_match
+PASSED
+tests/api/audio/test_audio_matching.py::TestTrimStart::test_trim_start_20_percent Trim START 20%: audio=78.4%, transcript=79.3%, status=no_match
+PASSED
+tests/api/audio/test_audio_matching.py::TestTrimEnd::test_trim_end_13_percent Trim END 13%: audio=86.5%, transcript=79.7%, status=near_match
+PASSED
+tests/api/audio/test_audio_matching.py::TestTrimEnd::test_trim_end_14_percent Trim END 14%: audio=83.8%, transcript=80.5%, status=near_match
+PASSED
+tests/api/audio/test_audio_matching.py::TestTrimEnd::test_trim_end_15_percent Trim END 15%: audio=83.8%, transcript=80.9%, status=near_match
+PASSED
+tests/api/audio/test_audio_matching.py::TestTrimEnd::test_trim_end_16_percent Trim END 16%: audio=81.1%, transcript=82.0%, status=no_match
+PASSED
+tests/api/audio/test_audio_matching.py::TestTrimEnd::test_trim_end_17_percent Trim END 17%: audio=81.1%, transcript=84.0%, status=no_match
+PASSED
+tests/api/audio/test_audio_matching.py::TestTrimEnd::test_trim_end_18_percent Trim END 18%: audio=81.1%, transcript=79.7%, status=no_match
+PASSED
+tests/api/audio/test_audio_matching.py::TestTrimEnd::test_trim_end_19_percent Trim END 19%: audio=78.4%, transcript=79.3%, status=no_match
+PASSED
+tests/api/audio/test_audio_matching.py::TestTrimEnd::test_trim_end_20_percent Trim END 20%: audio=78.4%, transcript=78.9%, status=no_match
+PASSED
+tests/api/audio/test_audio_matching.py::TestTrimMiddle::test_trim_middle_13_percent Trim MIDDLE 13%: audio=86.5%, transcript=83.6%, status=near_match
+PASSED
+tests/api/audio/test_audio_matching.py::TestTrimMiddle::test_trim_middle_14_percent Trim MIDDLE 14%: audio=83.8%, transcript=81.6%, status=near_match
+PASSED
+tests/api/audio/test_audio_matching.py::TestTrimMiddle::test_trim_middle_15_percent Trim MIDDLE 15%: audio=83.8%, transcript=84.8%, status=near_match
+PASSED
+tests/api/audio/test_audio_matching.py::TestTrimMiddle::test_trim_middle_16_percent Trim MIDDLE 16%: audio=81.1%, transcript=84.0%, status=no_match
+PASSED
+tests/api/audio/test_audio_matching.py::TestTrimMiddle::test_trim_middle_17_percent Trim MIDDLE 17%: audio=81.1%, transcript=84.4%, status=no_match
+PASSED
+tests/api/audio/test_audio_matching.py::TestTrimMiddle::test_trim_middle_18_percent Trim MIDDLE 18%: audio=78.4%, transcript=84.4%, status=no_match
+PASSED
+tests/api/audio/test_audio_matching.py::TestTrimMiddle::test_trim_middle_19_percent Trim MIDDLE 19%: audio=78.4%, transcript=81.2%, status=no_match
+PASSED
+tests/api/audio/test_audio_matching.py::TestTrimMiddle::test_trim_middle_20_percent Trim MIDDLE 20%: audio=78.4%, transcript=81.2%, status=no_match
+PASSED
+
+======================== 26 passed in 489.36s (0:08:09) ========================

@@ -7,7 +7,7 @@ import pytest
 import time
 
 BASE_URL = os.environ.get("BASE_URL", "http://localhost:8000")
-TMP_DIR = "./tmp/audio_pytest"
+TMP_DIR = "./tmp/tests/api/audio_matching"
 REQUEST_TIMEOUT = 300
 
 LOREM_IPSUM = """
@@ -50,14 +50,29 @@ def setup_teardown():
     wait_for_service()
     os.makedirs(TMP_DIR, exist_ok=True)
     yield
-    shutil.rmtree(TMP_DIR, ignore_errors=True)
+    # Clean up TMP_DIR and empty parent directories up to ./tmp
+    dir_to_remove = TMP_DIR
+    while dir_to_remove and dir_to_remove not in (".", "./", ""):
+        try:
+            os.rmdir(dir_to_remove)
+            dir_to_remove = os.path.dirname(dir_to_remove)
+            if dir_to_remove == "./tmp":
+                # Try to remove ./tmp as well, then stop
+                try:
+                    os.rmdir(dir_to_remove)
+                except OSError:
+                    pass
+                break
+        except OSError:
+            break  # Directory not empty, stop climbing
 
 
 def reset():
     requests.post(f"{BASE_URL}/reset", timeout=30)
     for _ in range(20):
         stats = get_stats()
-        if stats.get("total_audio_segments", 0) == 0:
+        if (stats.get("total_audio_segments", 0) == 0 and 
+            stats.get("total_transcripts", 0) == 0):
             return
         time.sleep(0.2)
 
@@ -184,7 +199,7 @@ def match_file(path, audio_threshold=None, audio_offset=None,
 
 
 def get_audio_match(path, audio_threshold=0.85, audio_offset=0.03,
-                    transcript_threshold=0.85, transcript_offset=0):
+                    transcript_threshold=0.85, transcript_offset=-0.01):
     """Get audio and transcript match percentage and status."""
     # Get raw percentage (threshold=0)
     raw_matches = match_file(path, 

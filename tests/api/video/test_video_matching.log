@@ -1,0 +1,196 @@
+============================= test session starts ==============================
+platform linux -- Python 3.10.12, pytest-9.0.2, pluggy-1.6.0 -- /usr/bin/python3
+cachedir: .pytest_cache
+rootdir: /home/bjpw/workspace/matcha
+plugins: anyio-4.9.0, langsmith-0.4.4
+collecting ... 
+=== VIDEO_MAX_HAMMING=32 ===
+
+collected 92 items
+
+tests/api/video/test_video_matching.py::TestExactMatch::test_exact_match Exact match: video=100.0%, status=exact_match
+PASSED
+tests/api/video/test_video_matching.py::TestNoMatch::test_different_video_no_match Different video: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropRight::test_crop_right_match[2] Crop RIGHT 2%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropRight::test_crop_right_match[4] Crop RIGHT 4%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropRight::test_crop_right_match[6] Crop RIGHT 6%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropRight::test_crop_right_match[8] Crop RIGHT 8%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropRight::test_crop_right_match[10] Crop RIGHT 10%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropRight::test_crop_right_match[12] Crop RIGHT 12%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropRight::test_crop_right_match[14] Crop RIGHT 14%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropRight::test_crop_right_match[16] Crop RIGHT 16%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropRight::test_crop_right_match[18] Crop RIGHT 18%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropRight::test_crop_right_match[20] Crop RIGHT 20%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropLeft::test_crop_left_match[2] Crop LEFT 2%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropLeft::test_crop_left_match[4] Crop LEFT 4%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropLeft::test_crop_left_match[6] Crop LEFT 6%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropLeft::test_crop_left_match[8] Crop LEFT 8%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropLeft::test_crop_left_match[10] Crop LEFT 10%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropLeft::test_crop_left_match[12] Crop LEFT 12%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropLeft::test_crop_left_match[14] Crop LEFT 14%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropLeft::test_crop_left_match[16] Crop LEFT 16%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropLeft::test_crop_left_match[18] Crop LEFT 18%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropLeft::test_crop_left_match[20] Crop LEFT 20%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropTop::test_crop_top_match[2] Crop TOP 2%: video=91.6%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropTop::test_crop_top_match[4] Crop TOP 4%: video=90.9%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropTop::test_crop_top_match[6] Crop TOP 6%: video=90.8%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropTop::test_crop_top_match[8] Crop TOP 8%: video=90.6%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropTop::test_crop_top_match[10] Crop TOP 10%: video=88.0%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropTop::test_crop_top_match[12] Crop TOP 12%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropTop::test_crop_top_match[14] Crop TOP 14%: video=88.5%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropTop::test_crop_top_match[16] Crop TOP 16%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropTop::test_crop_top_match[18] Crop TOP 18%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropTop::test_crop_top_match[20] Crop TOP 20%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropBottom::test_crop_bottom_match[2] Crop BOTTOM 2%: video=92.9%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropBottom::test_crop_bottom_match[4] Crop BOTTOM 4%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropBottom::test_crop_bottom_match[6] Crop BOTTOM 6%: video=88.2%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropBottom::test_crop_bottom_match[8] Crop BOTTOM 8%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropBottom::test_crop_bottom_match[10] Crop BOTTOM 10%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropBottom::test_crop_bottom_match[12] Crop BOTTOM 12%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropBottom::test_crop_bottom_match[14] Crop BOTTOM 14%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropBottom::test_crop_bottom_match[16] Crop BOTTOM 16%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropBottom::test_crop_bottom_match[18] Crop BOTTOM 18%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestCropBottom::test_crop_bottom_match[20] Crop BOTTOM 20%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestTrimStart::test_trim_start[2] Trim START 2%: video=97.7%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestTrimStart::test_trim_start[4] Trim START 4%: video=97.4%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestTrimStart::test_trim_start[6] Trim START 6%: video=97.3%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestTrimStart::test_trim_start[8] Trim START 8%: video=97.0%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestTrimStart::test_trim_start[10] Trim START 10%: video=96.8%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestTrimStart::test_trim_start[12] Trim START 12%: video=96.6%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestTrimStart::test_trim_start[14] Trim START 14%: video=94.6%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestTrimStart::test_trim_start[16] Trim START 16%: video=94.3%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestTrimStart::test_trim_start[18] Trim START 18%: video=90.7%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestTrimStart::test_trim_start[20] Trim START 20%: video=86.9%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestTrimEnd::test_trim_end[2] Trim END 2%: video=99.5%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestTrimEnd::test_trim_end[4] Trim END 4%: video=99.3%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestTrimEnd::test_trim_end[6] Trim END 6%: video=99.2%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestTrimEnd::test_trim_end[8] Trim END 8%: video=99.0%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestTrimEnd::test_trim_end[10] Trim END 10%: video=98.8%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestTrimEnd::test_trim_end[12] Trim END 12%: video=98.6%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestTrimEnd::test_trim_end[14] Trim END 14%: video=98.3%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestTrimEnd::test_trim_end[16] Trim END 16%: video=96.3%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestTrimEnd::test_trim_end[18] Trim END 18%: video=92.5%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestTrimEnd::test_trim_end[20] Trim END 20%: video=92.3%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestTrimMiddle::test_trim_middle[2] Trim MIDDLE 2%: video=99.5%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestTrimMiddle::test_trim_middle[4] Trim MIDDLE 4%: video=97.4%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestTrimMiddle::test_trim_middle[6] Trim MIDDLE 6%: video=97.2%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestTrimMiddle::test_trim_middle[8] Trim MIDDLE 8%: video=97.0%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestTrimMiddle::test_trim_middle[10] Trim MIDDLE 10%: video=96.8%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestTrimMiddle::test_trim_middle[12] Trim MIDDLE 12%: video=96.6%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestTrimMiddle::test_trim_middle[14] Trim MIDDLE 14%: video=92.8%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestTrimMiddle::test_trim_middle[16] Trim MIDDLE 16%: video=89.0%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestTrimMiddle::test_trim_middle[18] Trim MIDDLE 18%: video=87.1%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestTrimMiddle::test_trim_middle[20] Trim MIDDLE 20%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestSpeedDecrease::test_speed_decrease[2-0.98] Speed -2%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestSpeedDecrease::test_speed_decrease[4-0.96] Speed -4%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestSpeedDecrease::test_speed_decrease[6-0.94] Speed -6%: video=85.4%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestSpeedDecrease::test_speed_decrease[8-0.92] Speed -8%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestSpeedDecrease::test_speed_decrease[10-0.9] Speed -10%: video=87.5%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestSpeedDecrease::test_speed_decrease[12-0.88] Speed -12%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestSpeedDecrease::test_speed_decrease[14-0.86] Speed -14%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestSpeedDecrease::test_speed_decrease[16-0.84] Speed -16%: video=86.3%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestSpeedDecrease::test_speed_decrease[18-0.82] Speed -18%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestSpeedDecrease::test_speed_decrease[20-0.8] Speed -20%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestSpeedIncrease::test_speed_increase[2-1.02] Speed +2%: video=86.8%, status=near_match
+PASSED
+tests/api/video/test_video_matching.py::TestSpeedIncrease::test_speed_increase[4-1.04] Speed +4%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestSpeedIncrease::test_speed_increase[6-1.06] Speed +6%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestSpeedIncrease::test_speed_increase[8-1.08] Speed +8%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestSpeedIncrease::test_speed_increase[10-1.1] Speed +10%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestSpeedIncrease::test_speed_increase[12-1.12] Speed +12%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestSpeedIncrease::test_speed_increase[14-1.14] Speed +14%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestSpeedIncrease::test_speed_increase[16-1.16] Speed +16%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestSpeedIncrease::test_speed_increase[18-1.18] Speed +18%: video=0.0%, status=no_match
+PASSED
+tests/api/video/test_video_matching.py::TestSpeedIncrease::test_speed_increase[20-1.2] Speed +20%: video=0.0%, status=no_match
+PASSED
+
+======================= 92 passed in 1182.69s (0:19:42) ========================

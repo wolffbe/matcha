@@ -1,15 +1,29 @@
 # app/services/matching/video_matching.py
+"""
+Video matching using PDQ perceptual hashes.
+
+PDQ (Perceptual hash for Digital media Quality) produces 256-bit hashes.
+Hamming distance is used to compare hashes - lower distance means more similar.
+
+Threshold controls which frames count as matched:
+- max_hamming=64 (default) accepts ~25% bit difference
+- Frames with hamming > max_hamming are not counted (contribute 0)
+
+Score formula:
+- Each matched frame contributes: (256 - hamming) / 256
+- score = sum(frame_similarities) / max(query_frames, indexed_frames) * 100
+- is_exact = True only if all frames match with hamming=0 and all frames accounted for
+"""
 import uuid
 import logging
-from typing import Dict
+from typing import Dict, List, Tuple
 from qdrant_client import QdrantClient
-from qdrant_client.models import PointStruct, Filter, FieldCondition, MatchValue
+from qdrant_client.models import PointStruct, Filter, FieldCondition, MatchValue, QueryRequest
 from app.services.matching.matching_base import (
     VIDEO_COLLECTION,
     HASH_DIM,
     hash_to_vector,
-    euclidean_to_hamming,
-    count_segments
+    euclidean_to_hamming
 )
 
 logger = logging.getLogger(__name__)
@@ -24,90 +38,170 @@ class VideoMatcher:
         if not video_hashes:
             return 0
         
-        points = []
+        # First pass: count valid hashes
+        valid_hashes = []
         for i, h in enumerate(video_hashes):
             hex_val = h.get("hex", h) if isinstance(h, dict) else h
             if hex_val and len(str(hex_val)) == 64:
-                points.append(PointStruct(
-                    id=str(uuid.uuid4()),
-                    vector=hash_to_vector(str(hex_val)),
-                    payload={"item_id": item_id, "frame_index": i}
-                ))
+                valid_hashes.append((i, str(hex_val)))
         
-        if points:
-            self.qdrant.upsert(collection_name=VIDEO_COLLECTION, points=points)
+        total_frames = len(valid_hashes)
+        if total_frames == 0:
+            return 0
         
-        return len(points)
+        # Second pass: create points with total_frames in payload
+        points = [
+            PointStruct(
+                id=str(uuid.uuid4()),
+                vector=hash_to_vector(hex_val),
+                payload={
+                    "item_id": item_id,
+                    "frame_index": i,
+                    "total_frames": total_frames
+                }
+            )
+            for i, hex_val in valid_hashes
+        ]
+        
+        self.qdrant.upsert(collection_name=VIDEO_COLLECTION, points=points)
+        return total_frames
 
-    def match_hashes(self, video_hashes: list, threshold: float, offset: float) -> Dict[str, float]:
+    def match_hashes(self, video_hashes: list, threshold: float, offset: float, max_hamming: int = None) -> Dict[str, dict]:
         """
-        Match video frame hashes against indexed items.
+        Match video frame hashes against indexed items using Qdrant batch search.
         
-        threshold and offset control the hamming cutoff:
-        - effective_threshold = threshold - offset
-        - max_hamming = 256 * (1 - effective_threshold)
-        - e.g., threshold=0.85, offset=0.03 → 82% similarity → max 46 bits different
+        Algorithm:
+        1. Batch search all query frames in one request
+        2. For each query frame, find best match within threshold
+        3. Each matched frame contributes (256-hamming)/256 to score
+        4. Score = sum(similarities) / max(query_frames, indexed_frames) * 100
         
-        Returns dict of item_id -> match percentage.
+        Args:
+            video_hashes: List of query frame hashes
+            threshold: Similarity threshold (0.0-1.0)
+            offset: Calibration offset to subtract from threshold
+            max_hamming: Direct hamming threshold (overrides threshold/offset if provided)
+            
+        Returns:
+            Dict mapping item_id to {score: float, is_exact: bool}
         """
         if not video_hashes:
             return {}
         
-        # Calculate hamming threshold from API params
-        # exact_hamming: for rounding to 100%
-        # max_hamming: for filtering results
-        if threshold > 0:
-            exact_hamming = int(HASH_DIM * (1 - threshold))
+        # Calculate max hamming - use direct value if provided, otherwise from threshold
+        if max_hamming is not None:
+            ham_thresh = max_hamming
         else:
-            exact_hamming = -1  # never round to 100%
+            effective_threshold = max(0, threshold - offset)
+            ham_thresh = int(HASH_DIM * (1 - effective_threshold))
         
-        effective_threshold = threshold - offset
-        max_hamming = int(HASH_DIM * (1 - effective_threshold))
+        # Check collection
+        try:
+            collection_info = self.qdrant.get_collection(VIDEO_COLLECTION)
+            points_count = collection_info.points_count
+        except:
+            points_count = 0
         
-        logger.info(f"VIDEO MATCH: threshold={threshold}, offset={offset} → "
-                   f"exact_hamming={exact_hamming}, max_hamming={max_hamming}")
+        logger.info(f"VIDEO MATCH: max_hamming={ham_thresh}, points={points_count}")
         
-        matched: Dict[str, set] = {}
-        total = 0
-        
-        for idx, h in enumerate(video_hashes):
-            hex_val = h.get("hex", h) if isinstance(h, dict) else h
-            if not hex_val or len(str(hex_val)) != 64:
-                continue
-            
-            total += 1
-            results = self.qdrant.query_points(
-                collection_name=VIDEO_COLLECTION,
-                query=hash_to_vector(str(hex_val)),
-                limit=10
-            )
-            
-            for pt in results.points:
-                hit_id = pt.payload.get("item_id")
-                hamming = euclidean_to_hamming(pt.score)
-                if hamming <= max_hamming:
-                    matched.setdefault(hit_id, set()).add(idx)
-        
-        if total == 0:
+        if points_count == 0:
             return {}
         
+        # Parse query hashes
+        query_vectors: List[Tuple[int, List[float]]] = []
+        for idx, h in enumerate(video_hashes):
+            hex_val = h.get("hex", h) if isinstance(h, dict) else h
+            if hex_val and len(str(hex_val)) == 64:
+                query_vectors.append((idx, hash_to_vector(str(hex_val))))
+        
+        total_query = len(query_vectors)
+        if total_query == 0:
+            return {}
+        
+        # Batch search all frames at once
+        requests = [
+            QueryRequest(
+                query=vec,
+                limit=100,  # Get enough candidates to find correct item
+                with_payload=True
+            )
+            for idx, vec in query_vectors
+        ]
+        
+        try:
+            batch_results = self.qdrant.query_batch_points(
+                collection_name=VIDEO_COLLECTION,
+                requests=requests
+            )
+        except Exception as e:
+            logger.error(f"Batch search failed: {e}")
+            return {}
+        
+        # Process results - track both directions
+        # item_id -> set of matched query frame indices
+        item_query_matches: Dict[str, set] = {}
+        # item_id -> set of matched indexed frame indices  
+        item_indexed_matches: Dict[str, set] = {}
+        # item_id -> list of hamming distances
+        item_hammings: Dict[str, List[int]] = {}
+        # item_id -> total_frames (from payload)
+        item_indexed_counts: Dict[str, int] = {}
+        
+        for idx, result in enumerate(batch_results):
+            points = result.points if hasattr(result, 'points') else result
+            
+            if not points:
+                continue
+            
+            # Find best match within threshold
+            best_hamming = HASH_DIM + 1
+            best_item = None
+            best_indexed_frame = None
+            best_total_frames = 1
+            
+            for pt in points:
+                hamming = euclidean_to_hamming(pt.score)
+                
+                if hamming <= ham_thresh and hamming < best_hamming:
+                    best_hamming = hamming
+                    best_item = pt.payload.get("item_id")
+                    best_indexed_frame = pt.payload.get("frame_index", 0)
+                    best_total_frames = pt.payload.get("total_frames", 1)
+            
+            if best_item:
+                item_query_matches.setdefault(best_item, set()).add(idx)
+                item_indexed_matches.setdefault(best_item, set()).add(best_indexed_frame)
+                item_hammings.setdefault(best_item, []).append(best_hamming)
+                item_indexed_counts[best_item] = best_total_frames
+        
+        # Calculate scores
         results = {}
-        for hit_id, segs in matched.items():
-            indexed = count_segments(self.qdrant, VIDEO_COLLECTION, hit_id)
-            matched_count = len(segs)
-            max_count = max(total, indexed)
+        for item_id in item_query_matches.keys():
+            indexed_count = item_indexed_counts.get(item_id, 1)
             
-            # Calculate raw percentage
-            raw_pct = matched_count / max_count * 100 if max_count > 0 else 0
+            query_matched = len(item_query_matches[item_id])
+            indexed_matched = len(item_indexed_matches[item_id])
+            hammings = item_hammings[item_id]
             
-            # Round to 100% if within exact threshold
-            if raw_pct >= (threshold * 100):
-                pct = 100.0
-            else:
-                pct = raw_pct
+            max_frames = max(total_query, indexed_count)
             
-            logger.info(f"  [{hit_id[:8]}]: matched={matched_count}/{max_count}, score={pct:.1f}%")
-            results[hit_id] = pct
+            # Score = sum of similarities / max frames
+            # Each matched frame contributes (256-hamming)/256, unmatched contribute 0
+            total_similarity = sum((HASH_DIM - h) / HASH_DIM for h in hammings)
+            pct = (total_similarity / max_frames) * 100 if max_frames > 0 else 0
+            
+            # is_exact only if all frames matched with hamming=0 AND counts match
+            all_exact = all(h == 0 for h in hammings)
+            is_exact = all_exact and query_matched == total_query and indexed_matched == indexed_count
+            
+            # Cap at 99.9% if not exact
+            if not is_exact and pct > 99.9:
+                pct = 99.9
+            
+            logger.info(f"  [{item_id[:8]}]: q_match={query_matched}, i_match={indexed_matched}, "
+                       f"query={total_query}, indexed={indexed_count}, "
+                       f"score={pct:.1f}%, exact={is_exact}")
+            results[item_id] = {"score": pct, "is_exact": is_exact}
         
         return results
 

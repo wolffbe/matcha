@@ -1,4 +1,4 @@
-.PHONY: install db db-stop run dev test clean logs help reset-db stop dev-bg
+.PHONY: install db db-stop run dev test test-audio test-video test-image clean logs help reset-db stop dev-bg
 
 # Load and export all variables from .env file if it exists
 ifneq (,$(wildcard ./.env))
@@ -42,9 +42,34 @@ run: db
 dev: db
 	cd $(APP_DIR) && PYTHONPATH=. QDRANT_HOST=$(QDRANT_HOST) $(PYTHON) -m uvicorn $(APP_MODULE) --host $(HOST) --port $(PORT) --reload --no-access-log
 
-# Run tests (assumes app is already running)
-test:
-	pytest -v
+# Run all tests (assumes app is already running)
+test: test-audio test-video test-image
+
+# Run audio matching tests
+test-audio:
+	pytest -v -s tests/api/audio/test_audio_matching.py
+
+# Run audio matching tests and generate plots
+test-audio-plot:
+	pytest -v -s tests/api/audio/test_audio_matching.py 2>&1 | tee tests/api/audio/test_audio_matching.log
+	python tests/api/audio/plot_audio_matching.py
+
+# Run video matching tests
+test-video:
+	pytest -v -s tests/api/video/test_video_matching.py
+
+# Run video matching tests and generate plots
+test-video-plot:
+	pytest -v -s tests/api/video/test_video_matching.py | tee tests/api/video/test_video_matching.log
+
+# Run image matching tests
+test-image:
+	pytest -v -s tests/api/image/test_image_matching.py
+
+# Run image matching tests and generate plots
+test-image-plot:
+	pytest -v -s tests/api/image/test_image_matching.py 2>&1 | tee tests/api/image/test_image_matching.log
+	python tests/api/image/plot_image_matching.py
 
 # Start app in background for testing
 dev-bg: db
@@ -83,13 +108,21 @@ reset-db: db
 # Show help
 help:
 	@echo "Available targets:"
-	@echo "  install    - Install Python dependencies"
-	@echo "  db         - Start Qdrant database in Docker"
-	@echo "  db-stop    - Stop Qdrant database"
-	@echo "  run        - Start app locally (starts db first)"
-	@echo "  dev        - Start app locally with auto-reload"
-	@echo "  test       - Run tests (app must be running)"
-	@echo "  logs       - View database logs"
-	@echo "  clean      - Stop everything and clean up"
-	@echo "  reset-db   - Reset all database collections"
-	@echo "  help       - Show this help"
+	@echo "  install         - Install Python dependencies"
+	@echo "  db              - Start Qdrant database in Docker"
+	@echo "  db-stop         - Stop Qdrant database"
+	@echo "  run             - Start app locally (starts db first)"
+	@echo "  dev             - Start app locally with auto-reload"
+	@echo "  dev-bg          - Start app in background"
+	@echo "  stop            - Stop background app"
+	@echo "  test            - Run all tests (app must be running)"
+	@echo "  test-audio      - Run audio matching tests"
+	@echo "  test-audio-plot - Run audio tests and generate plots"
+	@echo "  test-video      - Run video matching tests"
+	@echo "  test-video-plot - Run video tests and generate plots"
+	@echo "  test-image      - Run image matching tests"
+	@echo "  test-image-plot - Run image tests and generate plots"
+	@echo "  logs            - View database logs"
+	@echo "  clean           - Stop app/db, remove tmp/, __pycache__, docker volumes"
+	@echo "  reset-db        - Reset all database collections"
+	@echo "  help            - Show this help"

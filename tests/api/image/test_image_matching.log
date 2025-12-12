@@ -1,0 +1,175 @@
+============================= test session starts ==============================
+platform linux -- Python 3.10.12, pytest-9.0.2, pluggy-1.6.0 -- /usr/bin/python3
+cachedir: .pytest_cache
+rootdir: /home/bjpw/workspace/matcha
+plugins: anyio-4.9.0, langsmith-0.4.4
+collecting ... collected 83 items
+
+tests/api/image/test_image_matching.py::TestExactMatch::test_exact_match Exact match: image=100.0%, status=exact_match
+PASSED
+tests/api/image/test_image_matching.py::TestNoMatch::test_different_image_no_match Different image: image=53.9%, status=no_match
+PASSED
+tests/api/image/test_image_matching.py::TestCutoffRight::test_cutoff_right_6_percent Cutoff RIGHT 6%: image=94.5%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestCutoffRight::test_cutoff_right_8_percent Cutoff RIGHT 8%: image=93.8%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestCutoffRight::test_cutoff_right_10_percent Cutoff RIGHT 10%: image=93.0%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestCutoffRight::test_cutoff_right_12_percent Cutoff RIGHT 12%: image=90.6%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestCutoffRight::test_cutoff_right_14_percent Cutoff RIGHT 14%: image=89.1%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestCutoffRight::test_cutoff_right_16_percent Cutoff RIGHT 16%: image=86.7%, status=no_match
+PASSED
+tests/api/image/test_image_matching.py::TestCutoffRight::test_cutoff_right_18_percent Cutoff RIGHT 18%: image=86.7%, status=no_match
+PASSED
+tests/api/image/test_image_matching.py::TestCutoffRight::test_cutoff_right_20_percent Cutoff RIGHT 20%: image=85.9%, status=no_match
+PASSED
+tests/api/image/test_image_matching.py::TestCutoffLeft::test_cutoff_left_6_percent Cutoff LEFT 6%: image=91.4%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestCutoffLeft::test_cutoff_left_8_percent Cutoff LEFT 8%: image=91.4%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestCutoffLeft::test_cutoff_left_10_percent Cutoff LEFT 10%: image=89.8%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestCutoffLeft::test_cutoff_left_12_percent Cutoff LEFT 12%: image=87.5%, status=no_match
+PASSED
+tests/api/image/test_image_matching.py::TestCutoffLeft::test_cutoff_left_14_percent Cutoff LEFT 14%: image=82.8%, status=no_match
+PASSED
+tests/api/image/test_image_matching.py::TestCutoffLeft::test_cutoff_left_16_percent Cutoff LEFT 16%: image=82.0%, status=no_match
+PASSED
+tests/api/image/test_image_matching.py::TestCutoffLeft::test_cutoff_left_18_percent Cutoff LEFT 18%: image=82.0%, status=no_match
+PASSED
+tests/api/image/test_image_matching.py::TestCutoffLeft::test_cutoff_left_20_percent Cutoff LEFT 20%: image=85.2%, status=no_match
+PASSED
+tests/api/image/test_image_matching.py::TestCutoffTop::test_cutoff_top_6_percent Cutoff TOP 6%: image=93.8%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestCutoffTop::test_cutoff_top_8_percent Cutoff TOP 8%: image=93.0%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestCutoffTop::test_cutoff_top_10_percent Cutoff TOP 10%: image=89.1%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestCutoffTop::test_cutoff_top_12_percent Cutoff TOP 12%: image=87.5%, status=no_match
+PASSED
+tests/api/image/test_image_matching.py::TestCutoffTop::test_cutoff_top_14_percent Cutoff TOP 14%: image=85.2%, status=no_match
+PASSED
+tests/api/image/test_image_matching.py::TestCutoffTop::test_cutoff_top_16_percent Cutoff TOP 16%: image=85.2%, status=no_match
+PASSED
+tests/api/image/test_image_matching.py::TestCutoffTop::test_cutoff_top_18_percent Cutoff TOP 18%: image=84.4%, status=no_match
+PASSED
+tests/api/image/test_image_matching.py::TestCutoffTop::test_cutoff_top_20_percent Cutoff TOP 20%: image=82.0%, status=no_match
+PASSED
+tests/api/image/test_image_matching.py::TestCutoffBottom::test_cutoff_bottom_6_percent Cutoff BOTTOM 6%: image=96.1%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestCutoffBottom::test_cutoff_bottom_8_percent Cutoff BOTTOM 8%: image=95.3%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestCutoffBottom::test_cutoff_bottom_10_percent Cutoff BOTTOM 10%: image=93.8%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestCutoffBottom::test_cutoff_bottom_12_percent Cutoff BOTTOM 12%: image=93.8%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestCutoffBottom::test_cutoff_bottom_14_percent Cutoff BOTTOM 14%: image=91.4%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestCutoffBottom::test_cutoff_bottom_16_percent Cutoff BOTTOM 16%: image=90.6%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestCutoffBottom::test_cutoff_bottom_18_percent Cutoff BOTTOM 18%: image=87.5%, status=no_match
+PASSED
+tests/api/image/test_image_matching.py::TestCutoffBottom::test_cutoff_bottom_20_percent Cutoff BOTTOM 20%: image=88.3%, status=no_match
+PASSED
+tests/api/image/test_image_matching.py::TestNoise::test_noise_6_percent Noise 6%: image=100.0%, status=exact_match
+PASSED
+tests/api/image/test_image_matching.py::TestNoise::test_noise_8_percent Noise 8%: image=97.7%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestNoise::test_noise_10_percent Noise 10%: image=97.7%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestNoise::test_noise_12_percent Noise 12%: image=98.4%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestNoise::test_noise_14_percent Noise 14%: image=97.7%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestNoise::test_noise_16_percent Noise 16%: image=98.4%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestNoise::test_noise_18_percent Noise 18%: image=96.9%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestNoise::test_noise_20_percent Noise 20%: image=96.9%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestBrightness::test_brightness_6_percent Brightness 6%: image=99.2%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestBrightness::test_brightness_8_percent Brightness 8%: image=99.2%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestBrightness::test_brightness_10_percent Brightness 10%: image=98.4%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestBrightness::test_brightness_12_percent Brightness 12%: image=98.4%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestBrightness::test_brightness_14_percent Brightness 14%: image=97.7%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestBrightness::test_brightness_16_percent Brightness 16%: image=97.7%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestBrightness::test_brightness_18_percent Brightness 18%: image=97.7%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestBrightness::test_brightness_20_percent Brightness 20%: image=97.7%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestContrast::test_contrast_6_percent Contrast 6%: image=96.9%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestContrast::test_contrast_8_percent Contrast 8%: image=96.9%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestContrast::test_contrast_10_percent Contrast 10%: image=96.1%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestContrast::test_contrast_12_percent Contrast 12%: image=95.3%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestContrast::test_contrast_14_percent Contrast 14%: image=94.5%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestContrast::test_contrast_16_percent Contrast 16%: image=93.8%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestContrast::test_contrast_18_percent Contrast 18%: image=93.0%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestContrast::test_contrast_20_percent Contrast 20%: image=92.2%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestResize::test_resize_6_percent Resize 6%: image=99.2%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestResize::test_resize_8_percent Resize 8%: image=98.4%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestResize::test_resize_10_percent Resize 10%: image=98.4%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestResize::test_resize_12_percent Resize 12%: image=98.4%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestResize::test_resize_14_percent Resize 14%: image=98.4%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestResize::test_resize_16_percent Resize 16%: image=98.4%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestResize::test_resize_18_percent Resize 18%: image=99.2%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestResize::test_resize_20_percent Resize 20%: image=98.4%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestGrayscale::test_grayscale Grayscale: image=100.0%, status=exact_match
+PASSED
+tests/api/image/test_image_matching.py::TestJPEGCompression::test_jpeg_6_percent JPEG 6%: image=98.4%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestJPEGCompression::test_jpeg_8_percent JPEG 8%: image=98.4%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestJPEGCompression::test_jpeg_10_percent JPEG 10%: image=98.4%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestJPEGCompression::test_jpeg_12_percent JPEG 12%: image=98.4%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestJPEGCompression::test_jpeg_14_percent JPEG 14%: image=98.4%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestJPEGCompression::test_jpeg_16_percent JPEG 16%: image=97.7%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestJPEGCompression::test_jpeg_18_percent JPEG 18%: image=98.4%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestJPEGCompression::test_jpeg_20_percent JPEG 20%: image=98.4%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestBlur::test_blur_6_percent Blur 6%: image=95.3%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestBlur::test_blur_8_percent Blur 8%: image=93.8%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestBlur::test_blur_10_percent Blur 10%: image=91.4%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestBlur::test_blur_12_percent Blur 12%: image=89.1%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestBlur::test_blur_14_percent Blur 14%: image=89.1%, status=near_match
+PASSED
+tests/api/image/test_image_matching.py::TestBlur::test_blur_16_percent Blur 16%: image=88.3%, status=no_match
+PASSED
+tests/api/image/test_image_matching.py::TestBlur::test_blur_18_percent Blur 18%: image=88.3%, status=no_match
+PASSED
+tests/api/image/test_image_matching.py::TestBlur::test_blur_20_percent Blur 20%: image=88.3%, status=no_match
+PASSED
+
+======================== 83 passed in 290.63s (0:04:50) ========================

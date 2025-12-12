@@ -1,0 +1,328 @@
+nohup: ignoring input
+================================================================================
+Video Threshold Calibration
+================================================================================
+
+Dependencies OK: ffmpeg, ffprobe
+
+Calibration criteria:
+  - 100% identical = exact_match
+  - ≤15% modification (10%, 12%, 14%) = near_match
+  - >15% modification (16%, 18%, 20%) = no_match
+
+Video threshold: 0.85 (no offset)
+
+Tests per hamming value:
+  - Crop (right/left/top/bottom) × 6 pct = 24 tests
+  - Trim (start/end/middle) × 6 pct = 18 tests
+  - Speed (+/-) × 6 pct = 12 tests
+  - Controls (exact, different) = 2 tests
+  - Total: 56 tests
+
+Testing video_max_hamming values: 0 to 200 (step 2)
+Total values to test: 101
+Video threshold: 0.85 (no offset)
+================================================================================
+
+Creating base video... done (30.0s)
+Creating different video... done
+
+[1/101] Testing video_max_hamming=0... 29/56 (52%)
+[2/101] Testing video_max_hamming=2... 33/56 (59%)
+[3/101] Testing video_max_hamming=4... 34/56 (61%)
+[4/101] Testing video_max_hamming=6... 34/56 (61%)
+[5/101] Testing video_max_hamming=8... 34/56 (61%)
+[6/101] Testing video_max_hamming=10... 34/56 (61%)
+[7/101] Testing video_max_hamming=12... 34/56 (61%)
+[8/101] Testing video_max_hamming=14... 34/56 (61%)
+[9/101] Testing video_max_hamming=16... 34/56 (61%)
+[10/101] Testing video_max_hamming=18... 34/56 (61%)
+[11/101] Testing video_max_hamming=20... 34/56 (61%)
+[12/101] Testing video_max_hamming=22... 34/56 (61%)
+[13/101] Testing video_max_hamming=24... 32/56 (57%)
+[14/101] Testing video_max_hamming=26... 32/56 (57%)
+[15/101] Testing video_max_hamming=28... 30/56 (54%)
+[16/101] Testing video_max_hamming=30... 31/56 (55%)
+[17/101] Testing video_max_hamming=32... 35/56 (62%)
+[18/101] Testing video_max_hamming=34... 35/56 (62%)
+[19/101] Testing video_max_hamming=36... 34/56 (61%)
+[20/101] Testing video_max_hamming=38... 34/56 (61%)
+[21/101] Testing video_max_hamming=40... 33/56 (59%)
+[22/101] Testing video_max_hamming=42... 32/56 (57%)
+[23/101] Testing video_max_hamming=44... 34/56 (61%)
+[24/101] Testing video_max_hamming=46... 34/56 (61%)
+[25/101] Testing video_max_hamming=48... 33/56 (59%)
+[26/101] Testing video_max_hamming=50... 33/56 (59%)
+[27/101] Testing video_max_hamming=52... 33/56 (59%)
+[28/101] Testing video_max_hamming=54... 33/56 (59%)
+[29/101] Testing video_max_hamming=56... 32/56 (57%)
+[30/101] Testing video_max_hamming=58... 32/56 (57%)
+[31/101] Testing video_max_hamming=60... 32/56 (57%)
+[32/101] Testing video_max_hamming=62... 32/56 (57%)
+[33/101] Testing video_max_hamming=64... 32/56 (57%)
+[34/101] Testing video_max_hamming=66... 32/56 (57%)
+[35/101] Testing video_max_hamming=68... 32/56 (57%)
+[36/101] Testing video_max_hamming=70... 32/56 (57%)
+[37/101] Testing video_max_hamming=72... 32/56 (57%)
+[38/101] Testing video_max_hamming=74... 32/56 (57%)
+[39/101] Testing video_max_hamming=76... 32/56 (57%)
+[40/101] Testing video_max_hamming=78... 32/56 (57%)
+[41/101] Testing video_max_hamming=80... 32/56 (57%)
+[42/101] Testing video_max_hamming=82... 32/56 (57%)
+[43/101] Testing video_max_hamming=84... 32/56 (57%)
+[44/101] Testing video_max_hamming=86... 32/56 (57%)
+[45/101] Testing video_max_hamming=88... 32/56 (57%)
+[46/101] Testing video_max_hamming=90... 32/56 (57%)
+[47/101] Testing video_max_hamming=92... 32/56 (57%)
+[48/101] Testing video_max_hamming=94... 32/56 (57%)
+[49/101] Testing video_max_hamming=96... 32/56 (57%)
+[50/101] Testing video_max_hamming=98... 32/56 (57%)
+[51/101] Testing video_max_hamming=100... 32/56 (57%)
+[52/101] Testing video_max_hamming=102... 32/56 (57%)
+[53/101] Testing video_max_hamming=104... 32/56 (57%)
+[54/101] Testing video_max_hamming=106... 32/56 (57%)
+[55/101] Testing video_max_hamming=108... 32/56 (57%)
+[56/101] Testing video_max_hamming=110... 32/56 (57%)
+[57/101] Testing video_max_hamming=112... 32/56 (57%)
+[58/101] Testing video_max_hamming=114... 32/56 (57%)
+[59/101] Testing video_max_hamming=116... 32/56 (57%)
+[60/101] Testing video_max_hamming=118... 32/56 (57%)
+[61/101] Testing video_max_hamming=120... 32/56 (57%)
+[62/101] Testing video_max_hamming=122... 32/56 (57%)
+[63/101] Testing video_max_hamming=124... 32/56 (57%)
+[64/101] Testing video_max_hamming=126... 32/56 (57%)
+[65/101] Testing video_max_hamming=128... 32/56 (57%)
+[66/101] Testing video_max_hamming=130... 32/56 (57%)
+[67/101] Testing video_max_hamming=132... 32/56 (57%)
+[68/101] Testing video_max_hamming=134... 32/56 (57%)
+[69/101] Testing video_max_hamming=136... 32/56 (57%)
+[70/101] Testing video_max_hamming=138... 32/56 (57%)
+[71/101] Testing video_max_hamming=140... 32/56 (57%)
+[72/101] Testing video_max_hamming=142... 32/56 (57%)
+[73/101] Testing video_max_hamming=144... 32/56 (57%)
+[74/101] Testing video_max_hamming=146... 32/56 (57%)
+[75/101] Testing video_max_hamming=148... 32/56 (57%)
+[76/101] Testing video_max_hamming=150... 32/56 (57%)
+[77/101] Testing video_max_hamming=152... 32/56 (57%)
+[78/101] Testing video_max_hamming=154... 32/56 (57%)
+[79/101] Testing video_max_hamming=156... 32/56 (57%)
+[80/101] Testing video_max_hamming=158... 32/56 (57%)
+[81/101] Testing video_max_hamming=160... 32/56 (57%)
+[82/101] Testing video_max_hamming=162... 32/56 (57%)
+[83/101] Testing video_max_hamming=164... 32/56 (57%)
+[84/101] Testing video_max_hamming=166... 32/56 (57%)
+[85/101] Testing video_max_hamming=168... 32/56 (57%)
+[86/101] Testing video_max_hamming=170... 32/56 (57%)
+[87/101] Testing video_max_hamming=172... 32/56 (57%)
+[88/101] Testing video_max_hamming=174... 32/56 (57%)
+[89/101] Testing video_max_hamming=176... 32/56 (57%)
+[90/101] Testing video_max_hamming=178... 32/56 (57%)
+[91/101] Testing video_max_hamming=180... 32/56 (57%)
+[92/101] Testing video_max_hamming=182... 32/56 (57%)
+[93/101] Testing video_max_hamming=184... 32/56 (57%)
+[94/101] Testing video_max_hamming=186... 32/56 (57%)
+[95/101] Testing video_max_hamming=188... 32/56 (57%)
+[96/101] Testing video_max_hamming=190... 32/56 (57%)
+[97/101] Testing video_max_hamming=192... 32/56 (57%)
+[98/101] Testing video_max_hamming=194... 32/56 (57%)
+[99/101] Testing video_max_hamming=196... 32/56 (57%)
+[100/101] Testing video_max_hamming=198... 32/56 (57%)
+[101/101] Testing video_max_hamming=200... 32/56 (57%)
+
+
+====================================================================================================
+HAMMING THRESHOLD COMPARISON
+====================================================================================================
+
+Hamming    | Correct      | Rate     | Crop         | Trim         | Speed       
+----------------------------------------------------------------------------------------------------
+32         | 35/56        |  62.5%  | 14/24        | 11/18        | 8/12       
+34         | 35/56        |  62.5%  | 14/24        | 11/18        | 8/12       
+4          | 34/56        |  60.7%  | 12/24        | 14/18        | 6/12       
+6          | 34/56        |  60.7%  | 12/24        | 14/18        | 6/12       
+8          | 34/56        |  60.7%  | 12/24        | 14/18        | 6/12       
+10         | 34/56        |  60.7%  | 12/24        | 14/18        | 6/12       
+12         | 34/56        |  60.7%  | 12/24        | 14/18        | 6/12       
+14         | 34/56        |  60.7%  | 12/24        | 14/18        | 6/12       
+16         | 34/56        |  60.7%  | 12/24        | 14/18        | 6/12       
+18         | 34/56        |  60.7%  | 12/24        | 14/18        | 6/12       
+20         | 34/56        |  60.7%  | 12/24        | 14/18        | 6/12       
+22         | 34/56        |  60.7%  | 12/24        | 14/18        | 6/12       
+36         | 34/56        |  60.7%  | 13/24        | 11/18        | 8/12       
+38         | 34/56        |  60.7%  | 13/24        | 11/18        | 8/12       
+44         | 34/56        |  60.7%  | 15/24        | 11/18        | 6/12       
+46         | 34/56        |  60.7%  | 15/24        | 11/18        | 6/12       
+2          | 33/56        |  58.9%  | 12/24        | 13/18        | 6/12       
+40         | 33/56        |  58.9%  | 13/24        | 12/18        | 6/12       
+48         | 33/56        |  58.9%  | 15/24        | 10/18        | 6/12       
+50         | 33/56        |  58.9%  | 15/24        | 10/18        | 6/12       
+52         | 33/56        |  58.9%  | 15/24        | 10/18        | 6/12       
+54         | 33/56        |  58.9%  | 15/24        | 10/18        | 6/12       
+24         | 32/56        |  57.1%  | 12/24        | 12/18        | 6/12       
+26         | 32/56        |  57.1%  | 12/24        | 12/18        | 6/12       
+42         | 32/56        |  57.1%  | 13/24        | 11/18        | 6/12       
+56         | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+58         | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+60         | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+62         | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+64         | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+66         | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+68         | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+70         | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+72         | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+74         | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+76         | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+78         | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+80         | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+82         | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+84         | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+86         | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+88         | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+90         | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+92         | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+94         | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+96         | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+98         | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+100        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+102        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+104        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+106        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+108        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+110        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+112        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+114        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+116        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+118        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+120        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+122        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+124        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+126        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+128        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+130        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+132        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+134        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+136        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+138        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+140        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+142        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+144        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+146        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+148        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+150        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+152        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+154        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+156        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+158        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+160        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+162        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+164        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+166        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+168        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+170        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+172        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+174        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+176        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+178        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+180        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+182        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+184        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+186        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+188        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+190        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+192        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+194        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+196        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+198        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+200        | 32/56        |  57.1%  | 15/24        | 9/18        | 6/12       
+30         | 31/56        |  55.4%  | 12/24        | 10/18        | 7/12       
+28         | 30/56        |  53.6%  | 12/24        | 10/18        | 6/12       
+0          | 29/56        |  51.8%  | 12/24        | 9/18        | 6/12       
+
+================================================================================
+BEST: video_max_hamming=32 (62.5% correct)
+================================================================================
+
+Detailed results for video_max_hamming=32
+--------------------------------------------------------------------------------
+Test                           | Expected     | Actual       | Video %    | Pass
+--------------------------------------------------------------------------------
+
+Controls:
+  Exact match                  | exact_match  | exact_match  | 100.0%     | ✓
+  Different video              | no_match     | no_match     | -          | ✓
+
+Crop Right:
+  Crop right 10%               | near_match   | no_match     | -          | ✗
+  Crop right 12%               | near_match   | no_match     | -          | ✗
+  Crop right 14%               | near_match   | no_match     | -          | ✗
+  Crop right 16%               | no_match     | no_match     | -          | ✓
+  Crop right 18%               | no_match     | no_match     | -          | ✓
+  Crop right 20%               | no_match     | no_match     | -          | ✓
+
+Crop Left:
+  Crop left 10%                | near_match   | no_match     | -          | ✗
+  Crop left 12%                | near_match   | no_match     | -          | ✗
+  Crop left 14%                | near_match   | no_match     | -          | ✗
+  Crop left 16%                | no_match     | no_match     | -          | ✓
+  Crop left 18%                | no_match     | no_match     | -          | ✓
+  Crop left 20%                | no_match     | no_match     | -          | ✓
+
+Crop Top:
+  Crop top 10%                 | near_match   | near_match   | 87.0%      | ✓
+  Crop top 12%                 | near_match   | no_match     | -          | ✗
+  Crop top 14%                 | near_match   | near_match   | 87.3%      | ✓
+  Crop top 16%                 | no_match     | no_match     | -          | ✓
+  Crop top 18%                 | no_match     | no_match     | -          | ✓
+  Crop top 20%                 | no_match     | no_match     | -          | ✓
+
+Crop Bottom:
+  Crop bottom 10%              | near_match   | no_match     | -          | ✗
+  Crop bottom 12%              | near_match   | no_match     | -          | ✗
+  Crop bottom 14%              | near_match   | no_match     | -          | ✗
+  Crop bottom 16%              | no_match     | no_match     | -          | ✓
+  Crop bottom 18%              | no_match     | no_match     | -          | ✓
+  Crop bottom 20%              | no_match     | no_match     | -          | ✓
+
+Trim Start:
+  Trim start 10%               | near_match   | near_match   | 95.7%      | ✓
+  Trim start 12%               | near_match   | no_match     | -          | ✗
+  Trim start 14%               | near_match   | no_match     | -          | ✗
+  Trim start 16%               | no_match     | no_match     | -          | ✓
+  Trim start 18%               | no_match     | no_match     | -          | ✓
+  Trim start 20%               | no_match     | near_match   | 91.5%      | ✗
+
+Trim End:
+  Trim end 10%                 | near_match   | near_match   | 98.7%      | ✓
+  Trim end 12%                 | near_match   | near_match   | 98.3%      | ✓
+  Trim end 14%                 | near_match   | near_match   | 98.3%      | ✓
+  Trim end 16%                 | no_match     | near_match   | 95.0%      | ✗
+  Trim end 18%                 | no_match     | near_match   | 95.0%      | ✗
+  Trim end 20%                 | no_match     | near_match   | 91.6%      | ✗
+
+Trim Middle:
+  Trim middle 10%              | near_match   | near_match   | 89.6%      | ✓
+  Trim middle 12%              | near_match   | near_match   | 86.3%      | ✓
+  Trim middle 14%              | near_match   | near_match   | 87.3%      | ✓
+  Trim middle 16%              | no_match     | near_match   | 86.8%      | ✗
+  Trim middle 18%              | no_match     | no_match     | -          | ✓
+  Trim middle 20%              | no_match     | no_match     | -          | ✓
+
+Speed Down:
+  Speed -10%                   | near_match   | near_match   | 91.1%      | ✓
+  Speed -12%                   | near_match   | near_match   | 86.2%      | ✓
+  Speed -14%                   | near_match   | no_match     | -          | ✗
+  Speed -16%                   | no_match     | no_match     | -          | ✓
+  Speed -18%                   | no_match     | no_match     | -          | ✓
+  Speed -20%                   | no_match     | no_match     | -          | ✓
+
+Speed Up:
+  Speed +10%                   | near_match   | no_match     | -          | ✗
+  Speed +12%                   | near_match   | no_match     | -          | ✗
+  Speed +14%                   | near_match   | no_match     | -          | ✗
+  Speed +16%                   | no_match     | no_match     | -          | ✓
+  Speed +18%                   | no_match     | no_match     | -          | ✓
+  Speed +20%                   | no_match     | no_match     | -          | ✓
+
+Completed in 3h 51m 48.7s
+Results exported to /home/bjpw/workspace/matcha/calibration/video/calibrate_video.txt
+Chart saved to /home/bjpw/workspace/matcha/calibration/video/calibrate_video.png

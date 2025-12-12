@@ -15,10 +15,14 @@ class Settings(BaseSettings):
     
     # Per-type offsets (0-0.5)
     image_offset: float = 0.0125
-    video_offset: float = 0.03
+    video_offset: float = 0
     audio_offset: float = 0.03
-    transcript_offset: float = 0
-
+    transcript_offset: float = -0.01
+    
+    # Video max hamming distance (for 256-bit PDQ hashes)
+    # Hamming 32 ≈ 87.5% threshold
+    video_max_hamming: int = 32
+    
     class Config:
         env_file = ".env"
 
