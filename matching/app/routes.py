@@ -8,7 +8,7 @@ import logging
 from app.config import settings
 from app.models import HashResponse, MatchResult, DeleteResponse, ResetResponse, StatsResponse
 from app.services.hashing import HashingService
-from app.services.matching import MatchingService
+from app.services.matching.matching import MatchingService
 from app.services.transcript import TranscriptService
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")

@@ -14,6 +14,18 @@ logger = logging.getLogger(__name__)
 class HashingService:
 
     @staticmethod
+    def has_audio_stream(file_path: str) -> bool:
+        """Check if file has an audio stream."""
+        result = subprocess.run([
+            "ffprobe", "-v", "error",
+            "-select_streams", "a",
+            "-show_entries", "stream=codec_type",
+            "-of", "csv=p=0",
+            file_path
+        ], capture_output=True, text=True)
+        return "audio" in result.stdout
+
+    @staticmethod
     def detect_type(file_path: str) -> str:
         ext = os.path.splitext(file_path)[1].lower()
         if ext in ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp']:
@@ -90,6 +102,11 @@ class HashingService:
 
     @classmethod
     def compute_audio_fingerprints(cls, file_path: str, window: float = 3.0, hop: float = 0.5) -> list[dict]:
+        # Skip if no audio stream
+        if not cls.has_audio_stream(file_path):
+            logger.info(f"No audio stream in {file_path}, skipping audio fingerprinting")
+            return []
+        
         result = subprocess.run([
             "ffprobe", "-v", "error",
             "-show_entries", "format=duration",

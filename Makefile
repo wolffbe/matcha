@@ -40,7 +40,7 @@ run: db
 
 # Run the app locally with auto-reload
 dev: db
-	cd $(APP_DIR) && PYTHONPATH=. QDRANT_HOST=$(QDRANT_HOST) $(PYTHON) -m uvicorn $(APP_MODULE) --host $(HOST) --port $(PORT) --reload
+	cd $(APP_DIR) && PYTHONPATH=. QDRANT_HOST=$(QDRANT_HOST) $(PYTHON) -m uvicorn $(APP_MODULE) --host $(HOST) --port $(PORT) --reload --no-access-log
 
 # Run tests (assumes app is already running)
 test:

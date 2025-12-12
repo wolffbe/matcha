@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     image_offset: float = 0.0125
     video_offset: float = 0.03
     audio_offset: float = 0.03
-    transcript_offset: float = 0.03
+    transcript_offset: float = 0
 
     class Config:
         env_file = ".env"

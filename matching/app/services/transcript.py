@@ -19,6 +19,18 @@ class TranscriptService:
         self.openai = OpenAI(api_key=settings.openai_api_key) if settings.openai_api_key else None
 
     @staticmethod
+    def has_audio_stream(file_path: str) -> bool:
+        """Check if file has an audio stream."""
+        result = subprocess.run([
+            "ffprobe", "-v", "error",
+            "-select_streams", "a",
+            "-show_entries", "stream=codec_type",
+            "-of", "csv=p=0",
+            file_path
+        ], capture_output=True, text=True)
+        return "audio" in result.stdout
+
+    @staticmethod
     def _normalize_text(text: str) -> str:
         """Normalize text for matching."""
         if not text:
@@ -33,6 +45,11 @@ class TranscriptService:
     def transcribe(self, file_path: str, language: str = None) -> str | None:
         """Transcribe audio/video file and return normalized text."""
         if not self.openai:
+            return None
+        
+        # Skip if no audio stream
+        if not self.has_audio_stream(file_path):
+            logger.info(f"No audio stream in {file_path}, skipping transcription")
             return None
 
         tmp_wav = f"/tmp/{uuid.uuid4()}.wav"
