@@ -11,7 +11,9 @@ import numpy as np
 from app.services.matching.matching_base import (
     TRANSCRIPT_COLLECTION,
     HASH_DIM,
-    euclidean_to_hamming
+    euclidean_to_hamming,
+    build_project_filter,
+    get_project_value
 )
 
 logger = logging.getLogger(__name__)
@@ -62,10 +64,12 @@ class TranscriptMatcher:
         # Final signature: 1 if positive votes, 0 otherwise
         return np.where(v > 0, 1.0, 0.0).tolist()
 
-    def add_transcript(self, item_id: str, text: str) -> int:
+    def add_transcript(self, item_id: str, text: str, project: str = None) -> int:
         """Index transcript as single SimHash vector."""
         if not text or not text.strip():
             return 0
+        
+        project_value = get_project_value(project)
         
         ngrams = self._get_char_ngrams(text)
         ngram_count = len(ngrams)
@@ -86,14 +90,16 @@ class TranscriptMatcher:
                 payload={
                     "item_id": item_id,
                     "ngram_count": ngram_count,
-                    "char_count": len(self._normalize(text))
+                    "char_count": len(self._normalize(text)),
+                    "project": project_value
                 }
             )]
         )
         
         return 1
 
-    def match_transcript(self, text: str, threshold: float, offset: float) -> Dict[str, float]:
+    def match_transcript(self, text: str, threshold: float, offset: float, 
+                         project: str = None) -> Dict[str, float]:
         """
         Match transcript using SimHash similarity.
         
@@ -136,10 +142,14 @@ class TranscriptMatcher:
         
         logger.info(f"  Threshold: {threshold}, offset: {offset} → exact_hamming: {exact_hamming}, max_hamming: {max_hamming}")
         
+        # Build project filter
+        query_filter = build_project_filter(project)
+        
         # Single search - get top candidates
         search_results = self.qdrant.query_points(
             collection_name=TRANSCRIPT_COLLECTION,
             query=vector,
+            query_filter=query_filter,
             limit=100
         )
         
@@ -166,11 +176,17 @@ class TranscriptMatcher:
         
         return results
 
-    def delete_item(self, item_id: str):
+    def delete_item(self, item_id: str, project: str = None):
         """Delete transcript for an item."""
+        project_value = get_project_value(project)
+        conditions = [
+            FieldCondition(key="item_id", match=MatchValue(value=item_id)),
+            FieldCondition(key="project", match=MatchValue(value=project_value))
+        ]
+        
         self.qdrant.delete(
             collection_name=TRANSCRIPT_COLLECTION,
-            points_selector=Filter(must=[FieldCondition(key="item_id", match=MatchValue(value=item_id))])
+            points_selector=Filter(must=conditions)
         )
 
     def get_transcript_count(self) -> int:

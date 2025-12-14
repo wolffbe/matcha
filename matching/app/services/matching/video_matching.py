@@ -23,7 +23,9 @@ from app.services.matching.matching_base import (
     VIDEO_COLLECTION,
     HASH_DIM,
     hash_to_vector,
-    euclidean_to_hamming
+    euclidean_to_hamming,
+    build_project_filter,
+    get_project_value
 )
 
 logger = logging.getLogger(__name__)
@@ -33,10 +35,12 @@ class VideoMatcher:
     def __init__(self, qdrant: QdrantClient):
         self.qdrant = qdrant
 
-    def add_hashes(self, item_id: str, video_hashes: list) -> int:
+    def add_hashes(self, item_id: str, video_hashes: list, project: str = None) -> int:
         """Index video frame hashes for an item. Returns count of indexed hashes."""
         if not video_hashes:
             return 0
+        
+        project_value = get_project_value(project)
         
         # First pass: count valid hashes
         valid_hashes = []
@@ -57,7 +61,8 @@ class VideoMatcher:
                 payload={
                     "item_id": item_id,
                     "frame_index": i,
-                    "total_frames": total_frames
+                    "total_frames": total_frames,
+                    "project": project_value
                 }
             )
             for i, hex_val in valid_hashes
@@ -66,7 +71,8 @@ class VideoMatcher:
         self.qdrant.upsert(collection_name=VIDEO_COLLECTION, points=points)
         return total_frames
 
-    def match_hashes(self, video_hashes: list, threshold: float, offset: float, max_hamming: int = None) -> Dict[str, dict]:
+    def match_hashes(self, video_hashes: list, threshold: float, offset: float, 
+                     max_hamming: int = None, project: str = None) -> Dict[str, dict]:
         """
         Match video frame hashes against indexed items using Qdrant batch search.
         
@@ -81,6 +87,7 @@ class VideoMatcher:
             threshold: Similarity threshold (0.0-1.0)
             offset: Calibration offset to subtract from threshold
             max_hamming: Direct hamming threshold (overrides threshold/offset if provided)
+            project: Project name to filter by
             
         Returns:
             Dict mapping item_id to {score: float, is_exact: bool}
@@ -102,10 +109,13 @@ class VideoMatcher:
         except:
             points_count = 0
         
-        logger.info(f"VIDEO MATCH: max_hamming={ham_thresh}, points={points_count}")
+        logger.info(f"VIDEO MATCH: max_hamming={ham_thresh}, points={points_count}, project={project}")
         
         if points_count == 0:
             return {}
+        
+        # Build project filter
+        query_filter = build_project_filter(project)
         
         # Parse query hashes
         query_vectors: List[Tuple[int, List[float]]] = []
@@ -122,6 +132,7 @@ class VideoMatcher:
         requests = [
             QueryRequest(
                 query=vec,
+                filter=query_filter,
                 limit=100,  # Get enough candidates to find correct item
                 with_payload=True
             )
@@ -205,11 +216,17 @@ class VideoMatcher:
         
         return results
 
-    def delete_item(self, item_id: str):
+    def delete_item(self, item_id: str, project: str = None):
         """Delete all video hashes for an item."""
+        project_value = get_project_value(project)
+        conditions = [
+            FieldCondition(key="item_id", match=MatchValue(value=item_id)),
+            FieldCondition(key="project", match=MatchValue(value=project_value))
+        ]
+        
         self.qdrant.delete(
             collection_name=VIDEO_COLLECTION,
-            points_selector=Filter(must=[FieldCondition(key="item_id", match=MatchValue(value=item_id))])
+            points_selector=Filter(must=conditions)
         )
 
     def get_hash_count(self) -> int:

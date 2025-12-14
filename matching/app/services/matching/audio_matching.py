@@ -9,7 +9,9 @@ from app.services.matching.matching_base import (
     AUDIO_COLLECTION,
     fingerprint_to_vector,
     euclidean_to_hamming,
-    count_segments
+    count_segments,
+    build_project_filter,
+    get_project_value
 )
 
 logger = logging.getLogger(__name__)
@@ -21,10 +23,12 @@ class AudioMatcher:
     def __init__(self, qdrant: QdrantClient):
         self.qdrant = qdrant
 
-    def add_segments(self, item_id: str, audio_segments: list) -> int:
+    def add_segments(self, item_id: str, audio_segments: list, project: str = None) -> int:
         """Index audio segments for an item. Returns count of indexed segments."""
         if not audio_segments:
             return 0
+        
+        project_value = get_project_value(project)
         
         points = []
         for i, seg in enumerate(audio_segments):
@@ -36,7 +40,8 @@ class AudioMatcher:
                     payload={
                         "item_id": item_id,
                         "segment_index": i,
-                        "start_time": seg.get("start_time", 0)
+                        "start_time": seg.get("start_time", 0),
+                        "project": project_value
                     }
                 ))
         
@@ -45,7 +50,7 @@ class AudioMatcher:
         
         return len(points)
 
-    def match_segments(self, audio_segments: list) -> Dict[str, float]:
+    def match_segments(self, audio_segments: list, project: str = None) -> Dict[str, float]:
         """
         Match audio segments against indexed items using batch search.
         Returns dict of item_id -> match percentage.
@@ -65,10 +70,14 @@ class AudioMatcher:
         if query_count == 0:
             return {}
         
+        # Build project filter
+        query_filter = build_project_filter(project)
+        
         # Batch search all segments at once
         requests = [
             QueryRequest(
                 query=vec,
+                filter=query_filter,
                 limit=10,
                 with_payload=True
             )
@@ -100,7 +109,7 @@ class AudioMatcher:
         # Calculate scores
         results = {}
         for hit_id, matches in item_matches.items():
-            indexed_count = count_segments(self.qdrant, AUDIO_COLLECTION, hit_id)
+            indexed_count = count_segments(self.qdrant, AUDIO_COLLECTION, hit_id, project)
             
             # Multi-offset detection: find all significant alignment offsets
             # offset = indexed_idx - query_idx
@@ -137,11 +146,17 @@ class AudioMatcher:
         
         return results
 
-    def delete_item(self, item_id: str):
+    def delete_item(self, item_id: str, project: str = None):
         """Delete all audio segments for an item."""
+        project_value = get_project_value(project)
+        conditions = [
+            FieldCondition(key="item_id", match=MatchValue(value=item_id)),
+            FieldCondition(key="project", match=MatchValue(value=project_value))
+        ]
+        
         self.qdrant.delete(
             collection_name=AUDIO_COLLECTION,
-            points_selector=Filter(must=[FieldCondition(key="item_id", match=MatchValue(value=item_id))])
+            points_selector=Filter(must=conditions)
         )
 
     def get_segment_count(self) -> int:

@@ -3,7 +3,7 @@ import logging
 from app.config import settings
 from app.services.matching.matching_base import (
     VIDEO_COLLECTION, AUDIO_COLLECTION, IMAGE_COLLECTION, TRANSCRIPT_COLLECTION,
-    get_qdrant_client, init_collections
+    get_qdrant_client, init_collections, build_project_filter, count_collection
 )
 from app.services.matching.audio_matching import AudioMatcher
 from app.services.matching.video_matching import VideoMatcher
@@ -24,7 +24,8 @@ class MatchingService:
         self.transcript_matcher = TranscriptMatcher(self.qdrant)
 
     def add_item(self, item_id: str, item_type: str, video_hashes: list = None,
-                 audio_segments: list = None, transcript_text: str = None, **kwargs) -> dict:
+                 audio_segments: list = None, transcript_text: str = None,
+                 project: str = None, **kwargs) -> dict:
         
         indexed_hashes = 0
         indexed_segments = 0
@@ -32,22 +33,23 @@ class MatchingService:
         
         if video_hashes:
             if item_type == "image":
-                indexed_hashes = self.image_matcher.add_hash(item_id, video_hashes)
+                indexed_hashes = self.image_matcher.add_hash(item_id, video_hashes, project=project)
             else:
-                indexed_hashes = self.video_matcher.add_hashes(item_id, video_hashes)
+                indexed_hashes = self.video_matcher.add_hashes(item_id, video_hashes, project=project)
         
         if audio_segments:
-            indexed_segments = self.audio_matcher.add_segments(item_id, audio_segments)
+            indexed_segments = self.audio_matcher.add_segments(item_id, audio_segments, project=project)
         
         if transcript_text:
-            indexed_transcripts = self.transcript_matcher.add_transcript(item_id, transcript_text)
+            indexed_transcripts = self.transcript_matcher.add_transcript(item_id, transcript_text, project=project)
         
         return {
             "indexed": True,
             "item_id": item_id,
             "indexed_hashes": indexed_hashes,
             "indexed_segments": indexed_segments,
-            "indexed_transcripts": indexed_transcripts
+            "indexed_transcripts": indexed_transcripts,
+            "project": project
         }
 
     def match_item(self, item_type: str = None, video_hashes: list = None,
@@ -56,7 +58,7 @@ class MatchingService:
                    audio_threshold: float = None, transcript_threshold: float = None,
                    image_offset: float = None, video_offset: float = None,
                    audio_offset: float = None, transcript_offset: float = None,
-                   video_max_hamming: int = None,
+                   video_max_hamming: int = None, project: str = None,
                    **kwargs) -> list[dict]:
         
         img_thresh = image_threshold if image_threshold is not None else settings.image_threshold
@@ -75,21 +77,21 @@ class MatchingService:
         if video_hashes:
             if media_type == "image":
                 img_ham_thresh = int(256 * (1 - (img_thresh - img_off))) + 1
-                for item_id, match_data in self.image_matcher.match_hash(video_hashes, img_ham_thresh).items():
+                for item_id, match_data in self.image_matcher.match_hash(video_hashes, img_ham_thresh, project=project).items():
                     candidates.setdefault(item_id, {})["image_match_percent"] = match_data["score"]
                     candidates[item_id]["image_is_exact"] = match_data["is_exact"]
             else:
-                for item_id, match_data in self.video_matcher.match_hashes(video_hashes, vid_thresh, vid_off, video_max_hamming).items():
+                for item_id, match_data in self.video_matcher.match_hashes(video_hashes, vid_thresh, vid_off, video_max_hamming, project=project).items():
                     candidates.setdefault(item_id, {})["video_match_percent"] = match_data["score"]
                     candidates[item_id]["video_is_exact"] = match_data["is_exact"]
         
         if audio_segments:
-            for item_id, pct in self.audio_matcher.match_segments(audio_segments).items():
+            for item_id, pct in self.audio_matcher.match_segments(audio_segments, project=project).items():
                 candidates.setdefault(item_id, {})["audio_match_percent"] = pct
         
         if transcript_text:
             for item_id, pct in self.transcript_matcher.match_transcript(
-                transcript_text, txt_thresh, txt_off
+                transcript_text, txt_thresh, txt_off, project=project
             ).items():
                 candidates.setdefault(item_id, {})["transcript_match_percent"] = pct
         
@@ -147,6 +149,7 @@ class MatchingService:
                 "video_match_percent": video_pct if media_type == "video" else None,
                 "audio_match_percent": audio_pct if media_type != "image" else None,
                 "transcript_match_percent": transcript_pct if media_type != "image" else None,
+                "project": project,
             })
         
         results.sort(key=lambda x: max(
@@ -158,26 +161,38 @@ class MatchingService:
         
         return results
 
-    def delete_item(self, item_id: str) -> dict:
-        self.video_matcher.delete_item(item_id)
-        self.audio_matcher.delete_item(item_id)
-        self.image_matcher.delete_item(item_id)
-        self.transcript_matcher.delete_item(item_id)
-        return {"deleted": True, "item_id": item_id}
+    def delete_item(self, item_id: str, project: str = None) -> dict:
+        self.video_matcher.delete_item(item_id, project=project)
+        self.audio_matcher.delete_item(item_id, project=project)
+        self.image_matcher.delete_item(item_id, project=project)
+        self.transcript_matcher.delete_item(item_id, project=project)
+        return {"deleted": True, "item_id": item_id, "project": project}
 
-    def reset(self) -> dict:
+    def reset(self, project: str = None) -> dict:
+        # Convert None to default project sentinel
+        from app.services.matching.matching_base import get_project_value
+        project_value = get_project_value(project)
+        
+        # Delete only points with matching project
+        from qdrant_client.models import Filter, FieldCondition, MatchValue
+        project_filter = Filter(must=[FieldCondition(key="project", match=MatchValue(value=project_value))])
+        
         for collection in [VIDEO_COLLECTION, AUDIO_COLLECTION, IMAGE_COLLECTION, TRANSCRIPT_COLLECTION]:
             try:
-                self.qdrant.delete_collection(collection_name=collection)
-            except:
-                pass
-        init_collections(self.qdrant)
-        return {"reset": True}
+                self.qdrant.delete(
+                    collection_name=collection,
+                    points_selector=project_filter
+                )
+            except Exception as e:
+                logger.warning(f"Failed to reset {collection} for project {project}: {e}")
+        
+        return {"reset": True, "project": project}
 
-    def get_stats(self) -> dict:
+    def get_stats(self, project: str = None) -> dict:
         return {
-            "total_video_hashes": self.video_matcher.get_hash_count(),
-            "total_audio_segments": self.audio_matcher.get_segment_count(),
-            "total_image_hashes": self.image_matcher.get_hash_count(),
-            "total_transcripts": self.transcript_matcher.get_transcript_count()
+            "total_video_hashes": count_collection(self.qdrant, VIDEO_COLLECTION, project),
+            "total_audio_segments": count_collection(self.qdrant, AUDIO_COLLECTION, project),
+            "total_image_hashes": count_collection(self.qdrant, IMAGE_COLLECTION, project),
+            "total_transcripts": count_collection(self.qdrant, TRANSCRIPT_COLLECTION, project),
+            "project": project
         }

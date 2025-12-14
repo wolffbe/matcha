@@ -9,6 +9,7 @@ class HashResponse(BaseModel):
     num_video_hashes: int = 0
     num_audio_segments: int = 0
     has_transcript: bool = False
+    project: str | None = None
 
 
 class MatchResult(BaseModel):
@@ -18,15 +19,18 @@ class MatchResult(BaseModel):
     video_match_percent: float | None = None
     audio_match_percent: float | None = None
     transcript_match_percent: float | None = None
+    project: str | None = None
 
 
 class DeleteResponse(BaseModel):
     item_id: str
     deleted: bool
+    project: str | None = None
 
 
 class ResetResponse(BaseModel):
     reset: bool
+    project: str | None = None
 
 
 class StatsResponse(BaseModel):
@@ -34,3 +38,4 @@ class StatsResponse(BaseModel):
     total_audio_segments: int = 0
     total_image_hashes: int = 0
     total_transcripts: int = 0
+    project: str | None = None

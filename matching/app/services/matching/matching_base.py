@@ -12,8 +12,15 @@ VIDEO_COLLECTION = "video_hashes"
 AUDIO_COLLECTION = "audio_hashes"
 IMAGE_COLLECTION = "image_hashes"
 TRANSCRIPT_COLLECTION = "transcript_vectors"
-
 HASH_DIM = 256
+
+# Sentinel value for default project (when no project specified)
+DEFAULT_PROJECT = "__default__"
+
+
+def get_project_value(project: str | None) -> str:
+    """Convert project parameter to storage value. None becomes DEFAULT_PROJECT."""
+    return project if project is not None else DEFAULT_PROJECT
 
 
 def get_qdrant_client() -> QdrantClient:
@@ -61,11 +68,51 @@ def euclidean_to_hamming(euclidean_dist: float) -> int:
     return int(round(euclidean_dist ** 2))
 
 
-def count_segments(qdrant: QdrantClient, collection: str, item_id: str) -> int:
-    """Count segments for an item in a collection."""
-    result = qdrant.scroll(
+def build_project_filter(project: str | None, additional_conditions: list = None) -> Filter:
+    """Build a Qdrant filter for project-based queries.
+    
+    Args:
+        project: Project name to filter by. None = filter for default project
+        additional_conditions: Additional filter conditions to include
+        
+    Returns:
+        Filter object
+    """
+    conditions = list(additional_conditions) if additional_conditions else []
+    
+    # Convert None to default project sentinel value
+    project_value = get_project_value(project)
+    conditions.append(FieldCondition(key="project", match=MatchValue(value=project_value)))
+    
+    return Filter(must=conditions)
+
+
+def build_item_filter(item_id: str, project: str | None = None) -> Filter:
+    """Build a filter for item_id with project constraint."""
+    project_value = get_project_value(project)
+    conditions = [
+        FieldCondition(key="item_id", match=MatchValue(value=item_id)),
+        FieldCondition(key="project", match=MatchValue(value=project_value))
+    ]
+    
+    return Filter(must=conditions)
+
+
+def count_segments(qdrant: QdrantClient, collection: str, item_id: str, project: str | None = None) -> int:
+    """Count segments for an item in a collection, filtered by project."""
+    result = qdrant.count(
         collection_name=collection,
-        scroll_filter=Filter(must=[FieldCondition(key="item_id", match=MatchValue(value=item_id))]),
-        limit=10000, with_payload=False, with_vectors=False
+        count_filter=build_item_filter(item_id, project),
+        exact=True
     )
-    return len(result[0])
+    return result.count
+
+
+def count_collection(qdrant: QdrantClient, collection: str, project: str | None = None) -> int:
+    """Count total items in a collection, filtered by project."""
+    result = qdrant.count(
+        collection_name=collection,
+        count_filter=build_project_filter(project),
+        exact=True
+    )
+    return result.count

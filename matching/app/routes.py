@@ -52,11 +52,12 @@ async def health():
 async def hash_media(
     file: UploadFile = File(...),
     language: str = Query(None),
-    skip_transcript: bool = Query(False, description="Skip transcription for audio/video")
+    skip_transcript: bool = Query(False, description="Skip transcription for audio/video"),
+    project: str = Query(None, description="Project name to group hashes")
 ):
     filename = file.filename or "unknown"
     tmp_path = f"/tmp/{uuid.uuid4()}_{filename}"
-    logger.info(f"Hash request: {filename}")
+    logger.info(f"Hash request: {filename}" + (f" [project={project}]" if project else ""))
 
     try:
         with open(tmp_path, "wb") as f:
@@ -90,7 +91,8 @@ async def hash_media(
             item_type=media_type,
             video_hashes=video_hashes or None,
             audio_segments=audio_segments or None,
-            transcript_text=transcript_text
+            transcript_text=transcript_text,
+            project=project
         )
 
         return HashResponse(
@@ -99,7 +101,8 @@ async def hash_media(
             indexed=True,
             num_video_hashes=len(video_hashes),
             num_audio_segments=len(audio_segments),
-            has_transcript=transcript_text is not None
+            has_transcript=transcript_text is not None,
+            project=project
         )
     except HTTPException:
         raise
@@ -116,6 +119,7 @@ async def match_media(
     file: UploadFile = File(...),
     language: str = Query(None),
     skip_transcript: bool = Query(False, description="Skip transcription for audio/video"),
+    project: str = Query(None, description="Project name to match against"),
     # Per-type thresholds
     image_threshold: float = Query(None, ge=0.0, le=1.0, description="Image match threshold (0-1)"),
     video_threshold: float = Query(None, ge=0.0, le=1.0, description="Video match threshold (0-1)"),
@@ -131,7 +135,7 @@ async def match_media(
 ):
     filename = file.filename or "unknown"
     tmp_path = f"/tmp/{uuid.uuid4()}_{filename}"
-    logger.info(f"Match request: {filename}")
+    logger.info(f"Match request: {filename}" + (f" [project={project}]" if project else ""))
 
     try:
         with open(tmp_path, "wb") as f:
@@ -191,7 +195,8 @@ async def match_media(
             video_offset=vid_off,
             audio_offset=aud_off,
             transcript_offset=trans_off,
-            video_max_hamming=vid_max_ham
+            video_max_hamming=vid_max_ham,
+            project=project
         )
 
         return [MatchResult(**r) for r in results]
@@ -206,27 +211,27 @@ async def match_media(
 
 
 @app.delete("/delete/{item_id}", response_model=DeleteResponse)
-async def delete_item(item_id: str):
-    logger.info(f"Delete request: {item_id[:12]}...")
+async def delete_item(item_id: str, project: str = Query(None, description="Project name")):
+    logger.info(f"Delete request: {item_id[:12]}..." + (f" [project={project}]" if project else ""))
     try:
-        matching_service.delete_item(item_id)
-        return DeleteResponse(item_id=item_id, deleted=True)
+        matching_service.delete_item(item_id, project=project)
+        return DeleteResponse(item_id=item_id, deleted=True, project=project)
     except Exception as e:
         logger.error(f"Delete failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/reset", response_model=ResetResponse)
-async def reset_index():
-    logger.info("Reset request")
+async def reset_index(project: str = Query(None, description="Project name to reset (None = reset all)")):
+    logger.info(f"Reset request" + (f" [project={project}]" if project else " [all]"))
     try:
-        matching_service.reset()
-        return ResetResponse(reset=True)
+        matching_service.reset(project=project)
+        return ResetResponse(reset=True, project=project)
     except Exception as e:
         logger.error(f"Reset failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/stats", response_model=StatsResponse)
-async def get_stats():
-    return StatsResponse(**matching_service.get_stats())
+async def get_stats(project: str = Query(None, description="Project name to get stats for")):
+    return StatsResponse(**matching_service.get_stats(project=project))
