@@ -172,4 +172,4 @@ PASSED
 tests/api/image/test_image_matching.py::TestBlur::test_blur_20_percent Blur 20%: image=88.3%, status=no_match
 PASSED
 
-======================== 83 passed in 290.63s (0:04:50) ========================
+======================== 83 passed in 273.08s (0:04:33) ========================

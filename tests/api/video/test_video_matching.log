@@ -193,4 +193,4 @@ PASSED
 tests/api/video/test_video_matching.py::TestSpeedIncrease::test_speed_increase[20-1.2] Speed +20%: video=0.0%, status=no_match
 PASSED
 
-======================= 92 passed in 1182.69s (0:19:42) ========================
+======================== 92 passed in 642.61s (0:10:42) ========================

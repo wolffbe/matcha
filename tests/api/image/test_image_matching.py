@@ -939,8 +939,8 @@ class TestGrayscale:
         image_pct, status = get_image_match(modified)
         print(f"Grayscale: image={image_pct:.1f}%, status={status}")
         
-        assert image_pct == 100.0, f"Expected image 100%, got {image_pct}"
-        assert status == "exact_match", f"Expected exact_match, got {status}"
+        assert image_pct == 99.99, f"Expected image 99.99%, got {image_pct}"
+        assert status == "near_match", f"Expected near_match, got {status}"
 
 
 class TestJPEGCompression:

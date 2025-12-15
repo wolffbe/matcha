@@ -332,6 +332,15 @@ def get_video_match(path, video_max_hamming=None):
         m = matches[0]
         video_pct = m.get('video_match_percent', 0.0) or 0.0
         status = m['status']
+        
+        # Validate response structure
+        item_id = m.get('item_id', '')
+        assert len(item_id) == 64 and all(c in '0123456789abcdef' for c in item_id), \
+            f"item_id should be SHA256 hash, got: {item_id}"
+        
+        # If we got a match result, video_pct must be > 0
+        assert video_pct > 0, f"Got match with status={status} but video_pct={video_pct}"
+        
         return video_pct, status, m
     else:
         return 0.0, "no_match", None

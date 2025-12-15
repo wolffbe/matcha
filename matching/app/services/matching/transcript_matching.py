@@ -101,10 +101,15 @@ class TranscriptMatcher:
     def match_transcript(self, text: str, threshold: float, offset: float, 
                          project: str = None) -> Dict[str, float]:
         """
-        Match transcript using SimHash similarity.
+        Match transcript using SimHash similarity with coverage penalty.
         
         Hamming distance between SimHash signatures approximates
         (1 - Jaccard similarity) of the underlying n-gram sets.
+        
+        Score = hamming_similarity * coverage
+        where coverage = min(query_ngrams, indexed_ngrams) / max(...)
+        
+        This ensures trimmed content can't score 100% against the original.
         
         threshold and offset control the hamming cutoff:
         - effective_threshold = threshold - offset
@@ -140,6 +145,10 @@ class TranscriptMatcher:
         effective_threshold = threshold - offset
         max_hamming = int(HASH_DIM * (1 - effective_threshold))
         
+        # Ensure max_hamming >= exact_hamming so matches that round to 100% aren't filtered out
+        if exact_hamming >= 0:
+            max_hamming = max(max_hamming, exact_hamming)
+        
         logger.info(f"  Threshold: {threshold}, offset: {offset} → exact_hamming: {exact_hamming}, max_hamming: {max_hamming}")
         
         # Build project filter
@@ -160,19 +169,23 @@ class TranscriptMatcher:
             item_id = pt.payload.get("item_id")
             indexed_ngram_count = pt.payload.get("ngram_count", 1)
             
-            # Score based on hamming distance (no length penalty)
+            # Coverage: ratio of smaller to larger ngram count
+            # Trimmed content can't match 100% of original
+            coverage = min(query_ngram_count, indexed_ngram_count) / max(query_ngram_count, indexed_ngram_count)
+            
+            # Score = hamming similarity * coverage
             if hamming <= exact_hamming:
-                # Within exact threshold: round up to 100%
-                pct = 100.0
+                # Within exact threshold: use coverage as max
+                pct = 100.0 * coverage
             else:
-                # SimHash similarity directly
-                pct = (HASH_DIM - hamming) / HASH_DIM * 100
+                # SimHash similarity scaled by coverage
+                pct = (HASH_DIM - hamming) / HASH_DIM * 100 * coverage
             
             logger.info(f"  [{item_id[:8]}]: hamming={hamming}, "
-                       f"ngrams=({query_ngram_count}/{indexed_ngram_count}), score={pct:.1f}%")
+                       f"ngrams=({query_ngram_count}/{indexed_ngram_count}), coverage={coverage:.1%}, score={pct:.1f}%")
             
-            if hamming <= max_hamming:
-                results[item_id] = pct
+            # Always return score, let caller decide threshold filtering
+            results[item_id] = pct
         
         return results
 

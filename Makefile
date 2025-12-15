@@ -1,4 +1,4 @@
-.PHONY: install db db-stop run dev test test-audio test-video test-image clean logs help reset-db stop dev-bg
+.PHONY: install db db-stop run dev test test-audio test-video test-image clean logs help reset-db stop dev-bg docker-run docker-down docker-logs examples
 
 # Load and export all variables from .env file if it exists
 ifneq (,$(wildcard ./.env))
@@ -18,6 +18,27 @@ APP_MODULE = app.routes:app
 
 # Default to localhost for local development
 QDRANT_HOST ?= localhost
+
+# Docker settings
+DOCKER_IMAGE ?= matcha
+DOCKER_TAG ?= latest
+
+# Run app and db in Docker (rebuilds if code changed)
+docker-run:
+	docker-compose build --no-cache
+	docker-compose up -d
+	@echo "Waiting for services to be ready..."
+	@timeout 30 sh -c 'until curl -s http://localhost:6333/collections > /dev/null 2>&1; do sleep 1; done' || (echo "Qdrant failed to start"; exit 1)
+	@timeout 60 sh -c 'until curl -s http://localhost:8000/stats > /dev/null 2>&1; do sleep 1; done' || (echo "App failed to start"; exit 1)
+	@echo "Services are ready (nginx + 4 app replicas + qdrant)"
+
+# Stop and remove Docker containers
+docker-down:
+	docker-compose down
+
+# View all logs
+docker-logs:
+	docker-compose logs -f
 
 # Install dependencies
 install:
@@ -71,6 +92,10 @@ test-image-plot:
 	pytest -v -s tests/api/image/test_image_matching.py 2>&1 | tee tests/api/image/test_image_matching.log
 	python tests/api/image/plot_image_matching.py
 
+# Run example script
+examples:
+	python examples/examples.py
+
 # Start app in background for testing
 dev-bg: db
 	cd $(APP_DIR) && PYTHONPATH=. QDRANT_HOST=$(QDRANT_HOST) $(PYTHON) -m uvicorn $(APP_MODULE) --host $(HOST) --port $(PORT) &
@@ -108,6 +133,8 @@ reset-db: db
 # Show help
 help:
 	@echo "Available targets:"
+	@echo ""
+	@echo "Local Development:"
 	@echo "  install         - Install Python dependencies"
 	@echo "  db              - Start Qdrant database in Docker"
 	@echo "  db-stop         - Stop Qdrant database"
@@ -115,6 +142,13 @@ help:
 	@echo "  dev             - Start app locally with auto-reload"
 	@echo "  dev-bg          - Start app in background"
 	@echo "  stop            - Stop background app"
+	@echo ""
+	@echo "Docker:"
+	@echo "  docker-run      - Build and start services (nginx + 4 replicas + qdrant)"
+	@echo "  docker-down     - Stop and remove Docker containers"
+	@echo "  docker-logs     - View all Docker service logs"
+	@echo ""
+	@echo "Testing:"
 	@echo "  test            - Run all tests (app must be running)"
 	@echo "  test-audio      - Run audio matching tests"
 	@echo "  test-audio-plot - Run audio tests and generate plots"
@@ -122,6 +156,9 @@ help:
 	@echo "  test-video-plot - Run video tests and generate plots"
 	@echo "  test-image      - Run image matching tests"
 	@echo "  test-image-plot - Run image tests and generate plots"
+	@echo "  examples        - Run example script with sample files"
+	@echo ""
+	@echo "Maintenance:"
 	@echo "  logs            - View database logs"
 	@echo "  clean           - Stop app/db, remove tmp/, __pycache__, docker volumes"
 	@echo "  reset-db        - Reset all database collections"

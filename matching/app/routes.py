@@ -182,6 +182,9 @@ async def match_media(
         elif media_type == "image":
             video_hashes = hashing_service.compute_video_hashes(tmp_path, is_image=True)
 
+        # Compute query file hash for exact_match detection
+        query_item_id = compute_file_hash(tmp_path)
+
         results = matching_service.match_item(
             item_type=media_type,
             video_hashes=video_hashes or None,
@@ -196,7 +199,8 @@ async def match_media(
             audio_offset=aud_off,
             transcript_offset=trans_off,
             video_max_hamming=vid_max_ham,
-            project=project
+            project=project,
+            query_item_id=query_item_id
         )
 
         return [MatchResult(**r) for r in results]
@@ -222,8 +226,8 @@ async def delete_item(item_id: str, project: str = Query(None, description="Proj
 
 
 @app.post("/reset", response_model=ResetResponse)
-async def reset_index(project: str = Query(None, description="Project name to reset (None = reset all)")):
-    logger.info(f"Reset request" + (f" [project={project}]" if project else " [all]"))
+async def reset_index(project: str = Query(None, description="Project name to reset (None = default project)")):
+    logger.info(f"Reset request" + (f" [project={project}]" if project else " [default]"))
     try:
         matching_service.reset(project=project)
         return ResetResponse(reset=True, project=project)

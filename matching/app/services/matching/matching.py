@@ -59,6 +59,7 @@ class MatchingService:
                    image_offset: float = None, video_offset: float = None,
                    audio_offset: float = None, transcript_offset: float = None,
                    video_max_hamming: int = None, project: str = None,
+                   query_item_id: str = None,
                    **kwargs) -> list[dict]:
         
         img_thresh = image_threshold if image_threshold is not None else settings.image_threshold
@@ -128,19 +129,17 @@ class MatchingService:
             if not any_match:
                 continue
             
-            # exact_match based on is_exact flag (hamming=0 for image/video)
-            if media_type == "image":
-                image_exact = data.get("image_is_exact", False)
-                status = "exact_match" if image_exact else "near_match"
-            elif media_type == "video":
-                video_exact = data.get("video_is_exact", False)
-                audio_exact = audio_pct == 100.0
-                transcript_exact = transcript_pct == 100.0
-                status = "exact_match" if video_exact or audio_exact or transcript_exact else "near_match"
-            else:
-                audio_exact = audio_pct == 100.0
-                transcript_exact = transcript_pct == 100.0
-                status = "exact_match" if audio_exact or transcript_exact else "near_match"
+            # exact_match only if SHA256 hashes match (same file)
+            # near_match if perceptually similar but different file
+            is_exact = query_item_id and item_id == query_item_id
+            status = "exact_match" if is_exact else "near_match"
+            
+            # Cap percentages at 99.99% if not exact same file
+            if not is_exact:
+                audio_pct = min(audio_pct, 99.99)
+                video_pct = min(video_pct, 99.99)
+                image_pct = min(image_pct, 99.99)
+                transcript_pct = min(transcript_pct, 99.99)
             
             results.append({
                 "item_id": item_id,
