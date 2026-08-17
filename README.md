@@ -2,6 +2,13 @@
 
 Matcha is a `Docker`-based media matching system using perceptual hashing (`pdqhash` for images/video and `chromaprint` for audio), OpenAI `whisper` transcription, and `qdrant` vector search.
 
+Where exact hashing only recognizes byte-identical files, Matcha recognizes media that has been altered — cropped, trimmed, re-encoded, pitch-shifted, blurred, or stamped with a logo — and still traces it back to the original. This makes it a building block for deduplication, copyright and brand protection, and tracking the spread of known content across platforms.
+
+- **Robust to manipulation**: near-matches survive crops, trims, logo overlays, compression, brightness/contrast changes and pitch shifts that defeat cryptographic hashes.
+- **Multi-modal by design**: video is matched independently on frames, audio and transcript — a heavily cropped video still matches through its unchanged soundtrack.
+- **Fast at any scale**: media of any length is reduced to compact fingerprints and matched via vector search instead of pairwise comparison, so lookup cost stays flat as the index grows.
+- **Ready to operate**: a two-endpoint API (`/hash`, `/match`), per-request tunable thresholds, multi-tenant project isolation, and calibrated defaults backed by an automated test suite.
+
 The system is vertically scalable by increasing `Uvicorn` workers in each container, and horizontally scalable by increasing the amount of concurrent Docker containers. Incoming requests are load-balanced by `nginx` to all available containers via round robin. Qdrant supports concurrent reading and writing.
 
 <img src="./docs/matcha.svg" />
